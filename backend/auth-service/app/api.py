@@ -126,5 +126,6 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
 
 
 @ api.post('/signout')
-async def sign_out():
-    return 'signin'
+async def sign_out(response: Response):
+    response.delete_cookie(key="access_token")
+    return

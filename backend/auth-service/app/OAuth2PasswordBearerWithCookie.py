@@ -1,4 +1,4 @@
-from fastapi import Request
+from fastapi import Request, HTTPException, status
 from typing import Optional
 from fastapi.security import OAuth2
 from fastapi.openapi.models import OAuth2 as OAuth2Model
@@ -27,7 +27,7 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
         if not authorization or scheme.lower() != "bearer":
             if self.auto_error:
                 raise HTTPException(
-                    status_code=HTTP_401_UNAUTHORIZED,
+                    status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Not authenticated",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
