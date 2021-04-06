@@ -1,2 +1,4 @@
 .DS_Store
 /backend/auth-service/app/__pycache__/*
+backend/auth-service/app/.env
+infra/k8s/jwt-secret-key.yaml

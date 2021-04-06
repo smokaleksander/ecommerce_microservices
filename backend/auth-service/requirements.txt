@@ -1,3 +1,9 @@
 fastapi
 uvicorn
 email-validator
+motor
+python-dotenv
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+
