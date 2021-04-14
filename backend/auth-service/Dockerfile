@@ -1,13 +1,19 @@
-FROM python:slim
+FROM python:3.8-slim
 
-WORKDIR /app
-COPY requirements.txt .
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc python-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install -r requirements.txt \
-    && apt-get purge -y --auto-remove gcc python-dev
+WORKDIR /
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
 COPY . .
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends apt-utils gcc python-dev  \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install pipenv \
+    && pipenv lock  \
+    && pipenv install --ignore-pipfile --system\
+    && apt-get purge -y --auto-remove gcc python-dev
+
 EXPOSE 8001
-CMD python app/main.py
+CMD python src/main.py

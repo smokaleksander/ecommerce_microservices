@@ -9,16 +9,14 @@ from pydantic import BaseModel, Field
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from models.User import User, UserResponse
-#from OAuth2PasswordBearerWithCookie import OAuth2PasswordBearerWithCookie
-from models.Token import Token, TokenData
-from current_user_middleware import get_current_user
+from auth_module.Token import Token, TokenData
+from auth_module.auth import authenticate
 
 SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 api = APIRouter(prefix='/api/users')
-#oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="signin")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -35,7 +33,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-async def authenticate_user(request: Request, username: str, password: str):
+async def varify_user_credentials(request: Request, username: str, password: str):
     user = await get_user(request, username)
     print(user)
     if not user:
@@ -67,7 +65,7 @@ async def list_users(request: Request):
 
 
 @ api.get("/users/me", response_description='get details about current logged user')
-async def read_users_me(request: Request, current_user: TokenData = Depends(get_current_user)):
+async def read_users_me(request: Request, current_user: TokenData = Depends(authenticate)):
     return await get_user(request, current_user.username)
 
 
@@ -89,7 +87,7 @@ async def create_user(request: Request, user: User):
 
 @ api.post('/signin', response_description='login to get jwt token in cookie')
 async def login(response: Response, request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
-    user = await authenticate_user(request, form_data.username, form_data.password)
+    user = await varify_user_credentials(request, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

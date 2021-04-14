@@ -1,7 +1,7 @@
 import os
 from fastapi import Depends, Request, HTTPException, status, Depends
-from models.Token import Token, TokenData
-from OAuth2PasswordBearerWithCookie import OAuth2PasswordBearerWithCookie
+from .Token import Token, TokenData
+from .OAuth2PasswordBearerWithCookie import OAuth2PasswordBearerWithCookie
 from jose import JWTError, jwt
 
 
@@ -11,7 +11,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
-async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)):
+async def authenticate(request: Request, token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
