@@ -11,5 +11,5 @@ ecom.dev
 if privacy error -> type 'thisisunsafe'
 
 sec run:
-run in docker-desktop k8s ns 'inz'
+run in docker-desktop k8s ns 'ecom'
 skaffold dev
