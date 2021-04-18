@@ -90,8 +90,8 @@ class UserSignUp(UserBase):
     @validator('password_repeat')
     def passwords_match(cls, v, values, **kwargs):
         if 'password' in values and v != values['password']:
-            raise HTTPException(
-                status_code=400, detail='Passwords dont match')
+            raise ValueError(
+                'Passwords do not match')
         return v
 
     class Config:

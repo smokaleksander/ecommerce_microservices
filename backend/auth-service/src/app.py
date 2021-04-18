@@ -80,7 +80,7 @@ async def create_user(request: Request, user: UserSignUp):
         {'username': user.username})
     if existing_user is not None:
         raise HTTPException(
-            status_code=400, detail={'msg': 'User with that username exists', 'field': 'username'})
+            status_code=400, detail={'errors': [{'msg': 'User with that username exists', 'field': 'username'}]})
     user.password = get_password_hash(user.password)
     user_db = UserDB(**user.dict())
     new_user = await request.app.mongodb['users'].insert_one(user_db.dict())

@@ -1,5 +1,6 @@
 import {useState} from 'react';
-import axios from 'axios';
+import Router from 'next/router';
+import useRequest from '../hooks/use-request';
 
 export default () => {
     const [email, setEmail] = useState('');
@@ -7,21 +8,20 @@ export default () => {
     const [password, setPassword] = useState('');
     const [password_repeat, setPasswordRepeat] = useState('');
     const [fullname, setFullname] = useState('');
-    const [errors, setErrors] = useState([]);
+    const {doRequest, errors } = useRequest({
+        url: '/api/users/signup',
+        method: 'post',
+        body: {
+            username, fullname, email, password, password_repeat
+        },
+        onSuccess: () => Router.push('/')
+
+    });
 
     const onSubmit = async (event) => {
         event.preventDefault();
 
-        try {
-            
-            const response = await axios.post('api/users/signup', {
-            username, fullname, email, password, password_repeat, 
-            });
-            console.log(response);
-            
-        } catch (err) {
-            setErrors(err.response.data.errors);
-        }
+        doRequest();
     };
     return (
         <form onSubmit={onSubmit}>
@@ -69,14 +69,7 @@ export default () => {
                 />
             </div>
             
-            <div className='alert-danger'>
-                <h4>There is something you need to check</h4>
-                <ul className='my-0'>
-                    {errors.map(err => (
-                        <li key={err.message}>{err.msg}</li>
-                    ))}
-                </ul>
-            </div>
+            {errors}
                     
             <button className='btn btn-primary'>Sign Up</button>
         </form>
