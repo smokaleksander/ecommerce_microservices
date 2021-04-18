@@ -12,10 +12,13 @@ python-dotenv = "*"
 python-multipart = "*"
 python-jose = {extras = ["cryptography"], version = "*"}
 passlib = {extras = ["bcrypt"], version = "*"}
+pymongo-inmemory = "*"
 
 [dev-packages]
 pytest = "*"
 requests = "*"
+mongomock = "*"
+pymongo-inmemory = "*"
 
 [requires]
 python_version = "3.8"
