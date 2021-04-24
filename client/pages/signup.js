@@ -4,7 +4,6 @@ import useRequest from '../hooks/use-request';
 
 export default () => {
     const [email, setEmail] = useState('');
-    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [password_repeat, setPasswordRepeat] = useState('');
     const [fullname, setFullname] = useState('');
@@ -12,7 +11,7 @@ export default () => {
         url: '/api/users/signup',
         method: 'post',
         body: {
-            username, fullname, email, password, password_repeat
+            fullname, 'username':email, password, password_repeat
         },
         onSuccess: () => Router.push('/')
 
@@ -32,14 +31,6 @@ export default () => {
                     className='form-control'
                     value={fullname} 
                     onChange={e => setFullname(e.target.value)}
-                />
-            </div>
-            <div className='form-group'>
-                <label>Username</label>
-                <input 
-                    className='form-control' 
-                    alue={username} 
-                    onChange={e => setUsername(e.target.value)}
                 />
             </div>
             <div className='form-group'>

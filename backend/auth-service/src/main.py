@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.encoders import jsonable_encoder
 from app import api
@@ -47,7 +48,11 @@ auth_service.add_middleware(
     allow_headers=["*"],
 )
 
-# override 422 error
+
+@auth_service.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    print(exc.detail)
+    return JSONResponse(status_code=exc.status_code, content=exc.detail)
 
 
 @auth_service.exception_handler(RequestValidationError)
@@ -60,6 +65,8 @@ async def validation_exception_handler(request, exc):
             {'msg': msg, 'field': field})
     print(errors)
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=jsonable_encoder({"errors": errors}))
+
+
 # start the server
 if __name__ == "__main__":
     uvicorn.run('main:auth_service', host="0.0.0.0", port=8001, reload=True)

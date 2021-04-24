@@ -5,7 +5,7 @@ from .OAuth2PasswordBearerWithCookie import OAuth2PasswordBearerWithCookie
 from jose import JWTError, jwt
 
 
-oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="signin")
+oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="api/users/signin")
 SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
