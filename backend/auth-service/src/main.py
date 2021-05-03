@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.encoders import jsonable_encoder
 from app import api
@@ -47,23 +48,25 @@ auth_service.add_middleware(
     allow_headers=["*"],
 )
 
-# override 422 error
+
+@auth_service.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    print(exc.detail)
+    return JSONResponse(status_code=exc.status_code, content=exc.detail)
 
 
 @auth_service.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     errors = []
     for err in exc.errors():
+        field = err['loc'][1]
+        msg = err['msg'].replace('this value', field)
         errors.append(
-            {'msg': err['msg'], 'field': err['loc'][1]})
+            {'msg': msg, 'field': field})
     print(errors)
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=jsonable_encoder({"errors": errors}))
-    """
-    return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        content={'detail': {'msg': exc.errors()[0].get('msg'), 'field': exc.errors()[
-                            0].get('loc')[1]}}
-                        )
-    """
+
+
 # start the server
 if __name__ == "__main__":
     uvicorn.run('main:auth_service', host="0.0.0.0", port=8001, reload=True)

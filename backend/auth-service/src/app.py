@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from models.User import UserSignUp, UserResponse, UserDB
+from models.User import UserSignUp, UserBase, UserDB, UserDBOut
 from auth_module.Token import Token, TokenData
 from auth_module.auth import authenticate
 
@@ -22,7 +22,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def get_user(request: Request, username: str):
     if (user := await request.app.mongodb["users"].find_one({"username": username})) is not None:
-        return User(**user)
+        return UserDBOut(**user)
 
 
 def verify_password(plain_password, hashed_password):
@@ -35,7 +35,6 @@ def get_password_hash(password):
 
 async def varify_user_credentials(request: Request, username: str, password: str):
     user = await get_user(request, username)
-    print(user)
     if not user:
         return False
     if user.disabled:
@@ -64,26 +63,33 @@ async def list_users(request: Request):
     return users
 
 
-@api.get("/users/me", response_description='get details about current logged user')
+@api.get("/currentuser", response_description='get details about current logged user')
 async def read_users_me(request: Request, current_user: TokenData = Depends(authenticate)):
-    return await get_user(request, current_user.username)
+    if current_user:
+        user = await get_user(request, current_user.username)
+        return UserBase(**user.dict())
+    return None
 
 
-@api.post('/signup', response_description='Create new user', status_code=201)
-async def create_user(request: Request, user: UserSignUp):
-    existing_user = await request.app.mongodb['users'].find_one(
-        {'email': user.email})
-    if existing_user is not None:
-        raise HTTPException(
-            status_code=400, detail={'msg': 'User with that email exists', 'field': 'email'})
+@ api.post('/signup', status_code=201, )
+async def create_user(response: Response, request: Request, user: UserSignUp):
     existing_user = await request.app.mongodb['users'].find_one(
         {'username': user.username})
     if existing_user is not None:
         raise HTTPException(
-            status_code=400, detail={'msg': 'User with that username exists', 'field': 'username'})
+            status_code=400, detail={'errors': [{'msg': 'User with that email exists', 'field': 'email'}]})
     user.password = get_password_hash(user.password)
     user_db = UserDB(**user.dict())
     new_user = await request.app.mongodb['users'].insert_one(user_db.dict())
+    new_user = await request.app.mongodb['users'].find_one({'username': user_db.username})
+    new_user = UserBase(**new_user)
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"username": new_user.username, "id": str(new_user.id)}, expires_delta=access_token_expires
+    )
+    response.set_cookie(key="access_token",
+                        value=f"Bearer {access_token}", httponly=True)
+    return new_user
 
 
 @ api.post('/signin', response_description='login to get jwt token in cookie')
@@ -95,9 +101,10 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    # generate new token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"username": user.username, "id": str(user.id)}, expires_delta=access_token_expires
+        data={"username": user.username}, expires_delta=access_token_expires
     )
     response.set_cookie(key="access_token",
                         value=f"Bearer {access_token}", httponly=True)

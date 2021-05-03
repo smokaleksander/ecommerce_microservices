@@ -14,7 +14,7 @@ class PyObjectId(ObjectId):
     def validate(cls, v):
         if not ObjectId.is_valid(v):
             raise ValueError("Invalid objectid")
-        return ObjectId(v)
+        return str(v)
 
     @classmethod
     def __modify_schema__(cls, field_schema):
@@ -22,11 +22,9 @@ class PyObjectId(ObjectId):
 
 
 class UserBase(BaseModel):
-    # id: PyObjectId = Field(default_factory=PyObjectId, alias="id")
-    username: str = Field(min_length=4)
-    email: EmailStr = Field(...)
-    password: str = Field(min_length=6)
+    id: ObjectId = Field(default_factory=PyObjectId, alias="id")
     fullname: str
+    username: EmailStr = Field(...)
 
     @validator('fullname')
     def name_must_contain_space(cls, v):
@@ -38,12 +36,11 @@ class UserBase(BaseModel):
 
     class Config:
         allow_population_by_field_name = True
-        arbitrary_types_allowed = False
+        arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
         schema_extra = {
             "example": {
-                "username": "johndoe",
-                "email": "jdoe@example.com",
+                "username": "jdoe@example.com",
                 "password": "123456",
                 "fullname": "John Doe",
             }
@@ -52,13 +49,13 @@ class UserBase(BaseModel):
 
 class UserDB(UserBase):
     disabled: Optional[bool] = False
+    password: str = Field(min_length=6)
 
     class Config:
         json_encoders = {ObjectId: str}
         schema_extra = {
             "example": {
-                "username": "johndoe",
-                "email": "jdoe@example.com",
+                "username": "jdoe@example.com",
                 "password": "123456",
                 "fullname": "John Doe",
                 "disabled": False
@@ -66,40 +63,38 @@ class UserDB(UserBase):
         }
 
 
-class UserResponse(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="id")
-    username: str
-    email: EmailStr = Field(...)
-    full_name: str
+class UserDBOut(UserBase):
+    disabled: Optional[bool] = False
+    password: str = Field(min_length=6)
 
     class Config:
         json_encoders = {ObjectId: str}
         schema_extra = {
             "example": {
-                "id": "idasdasd",
-                "username": "johndoe2",
-                "email": "jdoe@example.com",
+                "username": "jdoe@example.com",
+                "password": "hashed",
                 "fullname": "John Doe",
+                "disabled": False
             }
         }
 
 
 class UserSignUp(UserBase):
+    password: str = Field(min_length=6)
     password_repeat: Optional[str]
 
-    @validator('password_repeat')
+    @ validator('password_repeat')
     def passwords_match(cls, v, values, **kwargs):
         if 'password' in values and v != values['password']:
-            raise HTTPException(
-                status_code=400, detail='Passwords dont match')
+            raise ValueError(
+                'Passwords do not match')
         return v
 
     class Config:
         schema_extra = {
             "example": {
-                "username": "johndoe2",
                 "fullname": "John Doe",
-                "email": "jdoe@example.com",
+                "username": "jdoe@example.com",
                 "password": "123456",
                 "password_repeat": "123456",
             }
