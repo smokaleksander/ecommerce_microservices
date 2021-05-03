@@ -12,12 +12,10 @@ from models.User import UserSignUp, UserBase, UserDB, UserDBOut
 from auth_module.Token import Token, TokenData
 from auth_module.auth import authenticate
 
-SECRET_KEY = os.getenv('JWT_SECRET_KEY')
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
 api = APIRouter(prefix='/api/users')
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+ALGORITHM = "HS256"
 
 
 async def get_user(request: Request, username: str):
@@ -51,7 +49,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, os.getenv(
+        'JWT_SECRET_KEY'), algorithm=ALGORITHM)
     return encoded_jwt
 
 
@@ -67,7 +66,7 @@ async def list_users(request: Request):
 async def read_users_me(request: Request, current_user: TokenData = Depends(authenticate)):
     if current_user:
         user = await get_user(request, current_user.username)
-        return UserBase(**user.dict())
+        return UserDBOut(**user.dict())
     return None
 
 
@@ -82,7 +81,7 @@ async def create_user(response: Response, request: Request, user: UserSignUp):
     user_db = UserDB(**user.dict())
     new_user = await request.app.mongodb['users'].insert_one(user_db.dict())
     new_user = await request.app.mongodb['users'].find_one({'username': user_db.username})
-    new_user = UserBase(**new_user)
+    new_user = UserDBOut(**new_user)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"username": new_user.username, "id": str(new_user.id)}, expires_delta=access_token_expires
@@ -108,7 +107,7 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
     )
     response.set_cookie(key="access_token",
                         value=f"Bearer {access_token}", httponly=True)
-    return UserResponse(**user.dict())
+    return UserBase(**user.dict())
 
 
 @ api.post('/signout')

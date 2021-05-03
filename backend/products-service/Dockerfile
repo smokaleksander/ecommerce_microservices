@@ -16,4 +16,4 @@ RUN apt-get update \
 #&& apt-get purge -y --auto-remove gcc python-dev
 
 EXPOSE 8001
-CMD python src/main.py
+CMD python main.py

@@ -1,6 +1,8 @@
 .DS_Store
 /backend/auth-service/app/__pycache__/*
 backend/auth-service/app/.env
+backend/products-service/.env
 infra/k8s/jwt-secret-key.yaml
 client/node_modules
 client/.next
+.vscode/

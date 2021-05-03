@@ -1,37 +1,33 @@
-import uvicorn
-from motor.motor_asyncio import AsyncIOMotorClient
-from fastapi import FastAPI, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.exceptions import RequestValidationError
+from config import settings
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
+import uvicorn
+from fastapi import FastAPI, status
+from motor.motor_asyncio import AsyncIOMotorClient
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from app import api
-from dotenv import load_dotenv
 import os
+from app.api import router
 
-load_dotenv()
+app = FastAPI(docs_url=settings.DOCS_URL,
+              openapi_url=settings.OPENAPI_URL, redoc_url=None, title=settings.APP_NAME)
 
-# create app instance
-auth_service = FastAPI(docs_url='/api/users/docs',
-                       openapi_url='/api/users/openapi.json', redoc_url=None, title='auth service')
-
-# inlude router
-auth_service.include_router(api)
+app.include_router(router)
 
 
-@auth_service.on_event("startup")
-async def startup_app():
-    if not os.getenv('JWT_SECRET_KEY'):
+@app.on_event("startup")
+async def startup_db_client():
+    if not settings.JWT_SECRET_KEY:
         raise ValueError('JWT_SECRET_KEY not defined')
         # connect to db
-    auth_service.mongodb_client = AsyncIOMotorClient(os.getenv('DB_URL'))
-    auth_service.mongodb = auth_service.mongodb_client[os.getenv('DB_NAME')]
+    app.mongodb_client = AsyncIOMotorClient(settings.DB_URL)
+    app.mongodb = app.mongodb_client[settings.DB_NAME]
 
 
-@auth_service.on_event("shutdown")
-async def shutdown_app():
-    auth_service.mongodb_client.close()
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    app.mongodb_client.close()
 
 
 # allow for cors requests
@@ -40,7 +36,7 @@ origins = [
     "http://localhost:3000",
 ]
 
-auth_service.add_middleware(
+app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
@@ -49,13 +45,13 @@ auth_service.add_middleware(
 )
 
 
-@auth_service.exception_handler(StarletteHTTPException)
+@app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
     print(exc.detail)
     return JSONResponse(status_code=exc.status_code, content=exc.detail)
 
 
-@auth_service.exception_handler(RequestValidationError)
+@app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     errors = []
     for err in exc.errors():
@@ -66,7 +62,7 @@ async def validation_exception_handler(request, exc):
     print(errors)
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=jsonable_encoder({"errors": errors}))
 
-
 # start the server
 if __name__ == "__main__":
-    uvicorn.run('main:auth_service', host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run('main:app', host=settings.HOST,
+                port=settings.PORT, reload=settings.DEBUG_MODE)

@@ -22,7 +22,7 @@ class PyObjectId(ObjectId):
 
 
 class UserBase(BaseModel):
-    id: ObjectId = Field(default_factory=PyObjectId, alias="id")
+
     fullname: str
     username: EmailStr = Field(...)
 
@@ -40,6 +40,7 @@ class UserBase(BaseModel):
         json_encoders = {ObjectId: str}
         schema_extra = {
             "example": {
+                'id': 'asdfasdfadsfasfasdf',
                 "username": "jdoe@example.com",
                 "password": "123456",
                 "fullname": "John Doe",
@@ -52,7 +53,7 @@ class UserDB(UserBase):
     password: str = Field(min_length=6)
 
     class Config:
-        json_encoders = {ObjectId: str}
+        #json_encoders = {ObjectId: str}
         schema_extra = {
             "example": {
                 "username": "jdoe@example.com",
@@ -64,11 +65,12 @@ class UserDB(UserBase):
 
 
 class UserDBOut(UserBase):
+    id: ObjectId = Field(default_factory=PyObjectId, alias="_id")
     disabled: Optional[bool] = False
     password: str = Field(min_length=6)
 
     class Config:
-        json_encoders = {ObjectId: str}
+        #json_encoders = {ObjectId: str}
         schema_extra = {
             "example": {
                 "username": "jdoe@example.com",

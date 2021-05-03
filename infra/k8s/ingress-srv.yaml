@@ -19,6 +19,13 @@ spec:
                 name: auth-srv
                 port:
                   number: 8001
+          - path: /api/products/?(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: products-srv
+                port:
+                  number: 8002
           - path: /?(.*)
             pathType: Prefix
             backend:

@@ -14,7 +14,15 @@ build:
         dockerfile: Dockerfile
       sync:
         manual:
-          - src: "src/**/*.py"
+          - src: "**/**/*.py"
+            dest: .
+    - image: smokaleksander/products-service
+      context: backend/products-service
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+          - src: "**/**/*.py"
             dest: .
     - image: smokaleksander/nextjs
       context: client
