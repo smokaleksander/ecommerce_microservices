@@ -2,12 +2,12 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Products service"
-    DOCS_URL: str = '/api/products/docs'
-    OPENAPI_URL: str = '/api/products/openapi.json'
+    APP_NAME: str = "orders service"
+    DOCS_URL: str = '/api/orders/docs'
+    OPENAPI_URL: str = '/api/orders/openapi.json'
     DEBUG_MODE: bool = True
     HOST: str = "0.0.0.0"
-    PORT: int = 8002
+    PORT: int = 8003
     DB_URL: str
     DB_NAME: str
     JWT_SECRET_KEY: str

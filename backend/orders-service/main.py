@@ -1,5 +1,4 @@
 from config import settings
-
 from fastapi.exceptions import RequestValidationError
 import uvicorn
 from fastapi import FastAPI, status
