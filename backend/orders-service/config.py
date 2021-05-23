@@ -2,7 +2,7 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "orders service"
+    APP_NAME: str = "Orders service"
     DOCS_URL: str = '/api/orders/docs'
     OPENAPI_URL: str = '/api/orders/openapi.json'
     DEBUG_MODE: bool = True

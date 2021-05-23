@@ -12,7 +12,6 @@ python-jose = "*"
 asyncio-nats-streaming = "*"
 pydantic = "*"
 starlette = "*"
-beanie = "*"
 
 [dev-packages]
 

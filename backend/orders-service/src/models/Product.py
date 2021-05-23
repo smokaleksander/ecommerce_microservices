@@ -1,7 +1,16 @@
 from typing import Optional
 from bson import ObjectId
 from pydantic import BaseModel, Field
-from datetime import date
+from beanie import Document
+
+
+class Product(Document):
+    model: str
+    brand: str
+    price: float
+
+    class DocumentMeta:
+        collection_name = 'orders'
 
 
 class PyObjectId(ObjectId):
@@ -20,11 +29,11 @@ class PyObjectId(ObjectId):
         field_schema.update(type="string")
 
 
-class OrderModelDB(BaseModel):
-    user_id: str
-    status: str
-    expiresAt: date
-    product: Product
+class ProductModelIn(BaseModel):
+    #id: ObjectId = Field(default_factory=PyObjectId, alias="_id")
+    model: str
+    brand: str
+    price: float
 
     class Config:
         json_encoders = {ObjectId: str}
@@ -32,15 +41,14 @@ class OrderModelDB(BaseModel):
         allow_population_by_field_name = True
         schema_extra = {
             "example": {
-                "user_id": "00010203-0405-0607-0809-0a0b0c0d0e0f",
-                "status": 'nike',
-                'expiresAt': '45',
-                'product': '400'
+                "model": "jordan 4 blue navy",
+                "brand": 'nike',
+                'price': '400'
             }
         }
 
 
-class OrderModelOut(ProductModelIn):
+class ProductModelOut(ProductModelIn):
     id: ObjectId = Field(default_factory=PyObjectId, alias="_id")
 
     class Config:
@@ -48,10 +56,10 @@ class OrderModelOut(ProductModelIn):
         arbitrary_types_allowed = True
         allow_population_by_field_name = True
         schema_extra = {
-            "example": {"id": "00010203-0405-0607-0809-0a0b0c0d0e0f",
-                        "user_id": "00010203-0405-0607-0809-0a0b0c0d0e0f",
-                        "status": 'nike',
-                        'expiresAt': '45',
-                        'product': '400'
-                        }
+            "example": {
+                "id": "00010203-0405-0607-0809-0a0b0c0d0e0f",
+                "model": "jordan 4 blue navy",
+                "brand": 'nike',
+                'price': '400'
+            }
         }

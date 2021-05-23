@@ -1,17 +1,21 @@
-from config import settings
-from fastapi.exceptions import RequestValidationError
 import uvicorn
-from fastapi import FastAPI, status
-from motor.motor_asyncio import AsyncIOMotorClient
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
 import os
 import json
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from app.api import router
-from app.events_module.Publisher import Publisher
-from app.events_module.NatsWrapper import NatsWrapper
+from fastapi import FastAPI, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
+from events_module.Publisher import Publisher
+from events_module.NatsWrapper import NatsWrapper
+from config import settings
+from src.api import router
+from src.models.Order import Order
+from src.models.Product import Product
+
 app = FastAPI(docs_url=settings.DOCS_URL,
               openapi_url=settings.OPENAPI_URL, redoc_url=None, title=settings.APP_NAME)
 
@@ -19,18 +23,19 @@ app.include_router(router)
 
 
 @app.on_event("startup")
-async def startup_db_client():
+async def startup_connections():
     if not settings.JWT_SECRET_KEY:
         raise ValueError('JWT_SECRET_KEY not defined')
-        # connect to db
-    app.mongodb_client = AsyncIOMotorClient(settings.DB_URL)
-    app.mongodb = app.mongodb_client[settings.DB_NAME]
+    # connect to db
+    client = AsyncIOMotorClient(settings.DB_URL)
+    await init_beanie(client.orders,
+                      document_models=[Order, Product])
     # connecting to nats
     await NatsWrapper().connect()
 
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def shutdown_connections():
     app.mongodb_client.close()
     await NatsWrapper().getInstance().close()
 
