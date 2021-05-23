@@ -5,12 +5,13 @@ import json
 import random
 import string
 from .NatsWrapper import NatsWrapper
+from EventType import EventType
 
 
 class Publisher:
 
-    def __init__(self, subject):
-        self.subject = subject
+    def __init__(self, EventType):
+        self.subject = EventType
 
     async def publish(self, data):
 

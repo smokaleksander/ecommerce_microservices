@@ -6,7 +6,9 @@ from auth_module.Token import Token, TokenData
 from auth_module.auth import authenticate
 from .models.Order import Order, OrderIn, OrderOut
 from .models.Product import Product
-from events_module import Publisher, OrderStatus
+from events_module.Publisher import Publisher
+from events_module.OrderStatus import OrderStatus
+from events_module.EventType import EventType
 from datetime import datetime, timedelta
 from beanie import PydanticObjectId
 from typing import List
@@ -33,6 +35,8 @@ async def create_order(order: OrderIn,  current_user: TokenData = Depends(authen
     new_order = Order(user_id=current_user.id, status=OrderStatus.created,
                       expires_at=expiration, product=product)
     await new_order.insert()
+
+    Publisher(EventType.order_created).publish(new_order.dict())
     return new_order
 
 
@@ -52,5 +56,6 @@ async def show_order(id: PydanticObjectId, current_user: TokenData = Depends(aut
 async def delete_order(id: PydanticObjectId, current_user: TokenData = Depends(authenticate)):
     if (order := await Order.find(Order.user_id == current_user.id, _id=PydanticObjectId(id))) is not None:
         await order.delete()
+        Publisher(EventType.order_cancelled).publish(order.dict())
         return
     raise HTTPException(status_code=404, detail=f"Order {id} not found")
