@@ -22,8 +22,10 @@ class PyObjectId(ObjectId):
 
 class ProductModel(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    # product_id: str
     model: str
     price: float
+    version: int
 
     class Config:
         allow_population_by_field_name = True

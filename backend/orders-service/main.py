@@ -33,9 +33,6 @@ async def startup_connections():
     # connecting to nats
     await NatsWrapper().connect()
     # start listen on events
-    pr = ProductModel(id='60ad8c55eb0427d772fbd530',
-                      price=400, model='dunk OG white')
-    new_product = await Mongo.getInstance().db["products"].insert_one(pr.dict())
     await Listener(subject=EventType.product_created,
                    on_receive_func=create_product).listen()
     await Listener(EventType.product_updated, update_product).listen()

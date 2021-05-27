@@ -25,7 +25,7 @@ class Listener:
             await client.sc.ack(msg)
             obj = msg.data.decode('UTF-8')
             obj = json.loads(obj)
-            await self.on_receive_func(Request, obj)
+            await self.on_receive_func(obj)
 
         # Subscribe to get all messages since beginning.
         sub = await client.sc.subscribe(

@@ -23,7 +23,7 @@ async def create_product(request: Request, product: ProductModel,  current_user:
     )
     # emit event
     await Publisher(EventType.product_created).publish(
-        ProductModelDB(**created_product).json())
+        ProductModelDB(**created_product).json(exclude={'size', 'brand', 'user_id'}))
     return ProductModelDB(**created_product).json()
 
 
@@ -55,6 +55,8 @@ async def update_product(id: str, request: Request, product: ProductModel,  curr
         if (
             updated_product := await request.app.mongodb["products"].find_one({"_id": ObjectId(id), "user_id": current_user.id})
         ) is not None:
+            await Publisher(EventType.product_updated).publish(
+                ProductModelDB(**updated_product).json(exclude={'size', 'brand', 'user_id'}))
             return ProductModelDB(**updated_product)
 
     raise HTTPException(status_code=404, detail=f"Product {id} not found")
@@ -62,7 +64,7 @@ async def update_product(id: str, request: Request, product: ProductModel,  curr
 
 @ router.delete("/{id}", response_description="Delete product")
 async def delete_product(id: str, request: Request,  current_user: TokenData = Depends(authenticate)):
-    delete_result = await request.app.mongodb["products"].delete_one({"_id": ObjectId(id), "user_id": current_user.id})
+    delete_result = await request.app.mongodb["products"].delete_one({"id": ObjectId(id), "user_id": current_user.id})
 
     if delete_result.deleted_count == 1:
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)

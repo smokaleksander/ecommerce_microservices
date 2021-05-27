@@ -10,9 +10,10 @@ from events_module.Publisher import Publisher
 from events_module.OrderStatus import OrderStatus
 from events_module.EventType import EventType
 from datetime import datetime, timedelta
-from beanie import PydanticObjectId
 from typing import List
 from .MongoDB import Mongo
+from .product_utils import update_product
+
 EXPIRATION_CART_TIME_MINUTES = 30
 
 router = APIRouter(prefix='/api/orders')
@@ -53,8 +54,21 @@ async def list_orders(request: Request, current_user: TokenData = Depends(authen
 async def list_products(request: Request):
     products = []
     for doc in await Mongo.getInstance().db["products"].find({}).to_list(length=100):
-        products.append(ProductModel(**doc))
+        products.append(str(doc))
     return products
+
+
+@router.get("/products/{id}", response_description="Get a single product", status_code=200)
+async def show_product(id: str, request: Request):
+    if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})) is not None:
+        return str(product)
+
+    raise HTTPException(status_code=404, detail=f"Product {id} not found")
+
+
+@router.post('/product')
+async def up_prod(prod):
+    update_product(prod)
 
 
 @router.get("/{id}", response_model=OrderModelDB, status_code=200)
@@ -65,7 +79,7 @@ async def show_order(id: str, current_user: TokenData = Depends(authenticate)):
 
 
 @ router.delete("/{id}", response_description="Delete product", status_code=204)
-async def delete_order(id: PydanticObjectId, current_user: TokenData = Depends(authenticate)):
+async def delete_order(id: str, current_user: TokenData = Depends(authenticate)):
     if (order := await Order.find(Order.user_id == current_user.id, _id=PydanticObjectId(id))) is not None:
         await order.delete()
         Publisher(EventType.order_cancelled).publish(order.dict())
