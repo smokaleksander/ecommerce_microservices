@@ -1,17 +1,19 @@
-from fastapi import APIRouter, Body, Request, HTTPException, status, Depends
+from fastapi import APIRouter, Request, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from bson import ObjectId
 from .auth_module.Token import Token, TokenData
 from .auth_module.auth import authenticate
-from .models import ProductModelIn, ProductModelOut, ProductModelDB
-from .events_module import Publisher
+from .models import ProductModel, ProductModelDB
+from .events_module.Publisher import Publisher
+from .events_module.EventType import EventType
+
 router = APIRouter(prefix='/api/products')
 
 
 @router.post("/", response_description="Add new product", status_code=201)
-async def create_product(request: Request, product: ProductModelIn,  current_user: TokenData = Depends(authenticate)):
-    pr = ProductModelDB(**product.dict(), user_id=current_user.id)
+async def create_product(request: Request, product: ProductModel,  current_user: TokenData = Depends(authenticate)):
+    pr = ProductModelDB(**product.dict(), user_id=current_user.id, version=1)
     # save to DB
     new_product = await request.app.mongodb["products"].insert_one(pr.dict())
 
@@ -20,46 +22,40 @@ async def create_product(request: Request, product: ProductModelIn,  current_use
         {"_id": new_product.inserted_id}
     )
     # emit event
-    Publisher('product:created').publish(created_product.dict())
-    return ProductModelOut(**created_product)
+    await Publisher(EventType.product_created).publish(
+        ProductModelDB(**created_product).json())
+    return ProductModelDB(**created_product).json()
 
 
 @router.get("/", response_description="List all products", status_code=200)
 async def list_products(request: Request):
     products = []
     for doc in await request.app.mongodb["products"].find({}).to_list(length=100):
-        products.append(ProductModelOut(**doc))
+        products.append(ProductModelDB(**doc))
     return products
 
 
 @router.get("/{id}", response_description="Get a single product", status_code=200)
 async def show_product(id: str, request: Request):
     if (product := await request.app.mongodb["products"].find_one({"_id": ObjectId(id)})) is not None:
-        return ProductModelOut(**product)
+        return ProductModelDB(**product)
 
     raise HTTPException(status_code=404, detail=f"Product {id} not found")
 
 
 @router.put("/{id}", response_description="Update a product")
-async def update_product(id: str, request: Request, product: ProductModelIn,  current_user: TokenData = Depends(authenticate)):
-    product = {k: v for k, v in product.dict().items() if v is not None}
+async def update_product(id: str, request: Request, product: ProductModel,  current_user: TokenData = Depends(authenticate)):
 
-    if len(product) >= 1:
-        update_result = await request.app.mongodb["products"].update_one(
-            {"_id": ObjectId(id), "user_id": current_user.id}, {
-                "$set": product}
-        )
+    update_result = await request.app.mongodb["products"].update_one(
+        {"_id": ObjectId(id), "user_id": current_user.id},
+        {"$set": product.dict(), "$inc": {"version": 1}}
+    )
 
-        if update_result.modified_count == 1:
-            if (
-                updated_product := await request.app.mongodb["products"].find_one({"_id": ObjectId(id), "user_id": current_user.id})
-            ) is not None:
-                return ProductModelOut(**updated_product)
-
-    if (
-        existing_product := await request.app.mongodb["products"].find_one({"_id": ObjectId(id), "user_id": current_user.id})
-    ) is not None:
-        return ProductModelOut(**existing_product)
+    if update_result.modified_count == 1:
+        if (
+            updated_product := await request.app.mongodb["products"].find_one({"_id": ObjectId(id), "user_id": current_user.id})
+        ) is not None:
+            return ProductModelDB(**updated_product)
 
     raise HTTPException(status_code=404, detail=f"Product {id} not found")
 

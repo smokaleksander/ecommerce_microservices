@@ -1,6 +1,5 @@
 import asyncio
-from nats.aio.client import Client as NATS
-from stan.aio.client import Client as STAN
+from typing import Dict
 import json
 import random
 import string
@@ -12,11 +11,15 @@ class Publisher:
     def __init__(self, subject):
         self.subject = subject
 
-    async def publish(self, data):
+    async def ack_handler(ack):
+        print("Received ack: {}".format(ack.guid))
+
+    async def publish(self, data: Dict):
 
         client = NatsWrapper.getInstance()
-        data = json.dumps(data)
-        await client.sc.publish(subject=self.subject, payload=bytes(data, 'utf-8'))
-
+        print(type(data))
+        print(data)
+        await client.sc.publish(subject=self.subject.value, payload=bytes(data, 'UTF-8'), ack_handler=self.ack_handler)
+        print(self.subject.value)
         # await sc.close()
         # await nc.close()

@@ -4,28 +4,29 @@ from fastapi.encoders import jsonable_encoder
 from bson import ObjectId
 from auth_module.Token import Token, TokenData
 from auth_module.auth import authenticate
-from .models.Order import Order, OrderIn, OrderOut
-from .models.Product import Product
+from .models.Order import OrderModel, OrderModelDB
+from .models.Product import ProductModel
 from events_module.Publisher import Publisher
 from events_module.OrderStatus import OrderStatus
 from events_module.EventType import EventType
 from datetime import datetime, timedelta
 from beanie import PydanticObjectId
 from typing import List
-
+from .MongoDB import Mongo
 EXPIRATION_CART_TIME_MINUTES = 30
-router = APIRouter(prefix='/api/products')
+
+router = APIRouter(prefix='/api/orders')
 
 
-@router.post("/", response_model=Order, status_code=201)
-async def create_order(order: OrderIn,  current_user: TokenData = Depends(authenticate)):
+@router.post("/", response_model=OrderModelDB, status_code=201)
+async def create_order(order: OrderModel,  current_user: TokenData = Depends(authenticate)):
     # look for product user is trying to add to cart
-    if (product := await Product.get(order.product_id)) is None:
+    if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(order.id)})) is None:
         raise HTTPException(
             status_code=404, detail=f"Product {order.product_id} not found")
 
     # check if product is not in someone elses cart already
-    if (exisiting_order := await Order.find_one(Order.product == product, In(Order.status, [OrderStatus.created, OrderStatus.awaiting_status, OrderStatus.awaiting_payment, OrderStatus.complete]))) is not None:
+    if (exisiting_order := await Mongo.getInstance().db["orders"].find_one({Order.product == product, In(Order.status, [OrderStatus.created, OrderStatus.awaiting_status, OrderStatus.awaiting_payment, OrderStatus.complete])})) is not None:
         raise HTTPException(
             status_code=404, detail=f"Product is reserved")
 
@@ -40,13 +41,24 @@ async def create_order(order: OrderIn,  current_user: TokenData = Depends(authen
     return new_order
 
 
-@router.get("/", response_model=List[Order], status_code=200)
-async def list_orders(current_user: TokenData = Depends(authenticate)):
-    return await Order.find(Order.user_id == current_user.id).to_list()
+@router.get("/", response_model=List[OrderModelDB], status_code=200)
+async def list_orders(request: Request, current_user: TokenData = Depends(authenticate)):
+    orders = []
+    for doc in await Mongo.getInstance().db["orders"].find({}).to_list(length=100):
+        orders.append(OrderModelDB(**doc))
+    return orders
 
 
-@router.get("/{id}", response_model=Order, status_code=200)
-async def show_order(id: PydanticObjectId, current_user: TokenData = Depends(authenticate)):
+@router.get("/products", response_description="List all products", status_code=200)
+async def list_products(request: Request):
+    products = []
+    for doc in await Mongo.getInstance().db["products"].find({}).to_list(length=100):
+        products.append(ProductModel(**doc))
+    return products
+
+
+@router.get("/{id}", response_model=OrderModelDB, status_code=200)
+async def show_order(id: str, current_user: TokenData = Depends(authenticate)):
     if (order := await Order.find(Order.user_id == current_user.id, _id=PydanticObjectId(id))) is not None:
         return order
     raise HTTPException(status_code=404, detail=f"Order {id} not found")

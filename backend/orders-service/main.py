@@ -2,7 +2,7 @@ import uvicorn
 import os
 import json
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,11 +11,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from events_module.Publisher import Publisher
 from events_module.NatsWrapper import NatsWrapper
+from events_module.Listener import Listener
+from events_module.EventType import EventType
 from config import settings
 from src.api import router
-from src.models.Order import Order
-from src.models.Product import Product
-
+from src.product_utils import create_product, update_product
+from src.models.Product import ProductModel
+from src.MongoDB import Mongo
 app = FastAPI(docs_url=settings.DOCS_URL,
               openapi_url=settings.OPENAPI_URL, redoc_url=None, title=settings.APP_NAME)
 
@@ -27,11 +29,16 @@ async def startup_connections():
     if not settings.JWT_SECRET_KEY:
         raise ValueError('JWT_SECRET_KEY not defined')
     # connect to db
-    client = AsyncIOMotorClient(settings.DB_URL)
-    await init_beanie(client.orders,
-                      document_models=[Order, Product])
+    await Mongo().connect(settings.DB_URL, settings.DB_NAME)
     # connecting to nats
     await NatsWrapper().connect()
+    # start listen on events
+    pr = ProductModel(id='60ad8c55eb0427d772fbd530',
+                      price=400, model='dunk OG white')
+    new_product = await Mongo.getInstance().db["products"].insert_one(pr.dict())
+    await Listener(subject=EventType.product_created,
+                   on_receive_func=create_product).listen()
+    await Listener(EventType.product_updated, update_product).listen()
 
 
 @app.on_event("shutdown")
@@ -66,7 +73,7 @@ async def validation_exception_handler(request, exc):
     errors = []
     for err in exc.errors():
         field = err['loc'][1]
-        msg = err['msg'].replace('this value', field)
+        msg = err['msg'].replace('this value', str(field))
         errors.append(
             {'msg': msg, 'field': field})
     print(errors)

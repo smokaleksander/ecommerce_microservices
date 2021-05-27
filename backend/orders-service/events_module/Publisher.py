@@ -5,7 +5,7 @@ import json
 import random
 import string
 from .NatsWrapper import NatsWrapper
-from EventType import EventType
+from .EventType import EventType
 
 
 class Publisher:

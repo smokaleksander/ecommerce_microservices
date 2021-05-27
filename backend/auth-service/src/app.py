@@ -63,7 +63,7 @@ async def list_users(request: Request):
 
 
 @api.get("/currentuser", response_description='get details about current logged user')
-async def read_users_me(request: Request, current_user: TokenData = Depends(authenticate)):
+async def get_current_user(request: Request, current_user: TokenData = Depends(authenticate)):
     if current_user:
         user = await get_user(request, current_user.username)
         return UserDBOut(**user.dict())
@@ -103,7 +103,7 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
     # generate new token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"username": user.username}, expires_delta=access_token_expires
+        data={"username": user.username, 'id': str(user.id)}, expires_delta=access_token_expires
     )
     response.set_cookie(key="access_token",
                         value=f"Bearer {access_token}", httponly=True)

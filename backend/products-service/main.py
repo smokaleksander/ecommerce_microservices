@@ -10,8 +10,8 @@ import os
 import json
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api import router
-# from app.events_module.Publisher import Publisher
-# from app.events_module.NatsWrapper import NatsWrapper
+from app.events_module.Publisher import Publisher
+from app.events_module.NatsWrapper import NatsWrapper
 app = FastAPI(docs_url=settings.DOCS_URL,
               openapi_url=settings.OPENAPI_URL, redoc_url=None, title=settings.APP_NAME)
 
@@ -27,7 +27,7 @@ async def startup_connections():
     app.mongodb_client = AsyncIOMotorClient(settings.DB_URL)
     app.mongodb = app.mongodb_client[settings.DB_NAME]
     # connecting to nats
-    # await NatsWrapper().connect()
+    await NatsWrapper().connect()
 
 
 @app.on_event("shutdown")
@@ -62,7 +62,7 @@ async def validation_exception_handler(request, exc):
     errors = []
     for err in exc.errors():
         field = err['loc'][1]
-        msg = err['msg'].replace('this value', field)
+        msg = err['msg'].replace('this value', str(field))
         errors.append(
             {'msg': msg, 'field': field})
     print(errors)
