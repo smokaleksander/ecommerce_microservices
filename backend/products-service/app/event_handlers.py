@@ -18,8 +18,8 @@ async def lock_product(order):
 async def unlock_product(product):
     try:
         new_product = await Mongo.getInstance().db["products"].update_one(
-            {"_id": ObjectId(order["product"]["_id"])},
-            {"$set": {"order_id": null}}
+            {"_id": ObjectId(order["product"]["id"])},
+            {"$set": {"order_id": None}}
         )
     except:
         print('error')

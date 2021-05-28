@@ -9,7 +9,7 @@ from fastapi import Request
 class Listener:
     ack_wait_time = 3  # seconds
 
-    def __init__(self, subject, on_receive_func):
+    def __init__(self, subject: EventType, on_receive_func):
         self.subject = subject
         self.on_receive_func = on_receive_func
         self.queue_group_name = settings.APP_NAME

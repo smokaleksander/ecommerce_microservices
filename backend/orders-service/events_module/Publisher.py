@@ -1,19 +1,15 @@
 import asyncio
-from nats.aio.client import Client as NATS
-from stan.aio.client import Client as STAN
 import json
-import random
-import string
 from .NatsWrapper import NatsWrapper
 from .EventType import EventType
 
 
 class Publisher:
 
-    def __init__(self, subject):
+    def __init__(self, subject: EventType):
         self.subject = subject
 
-    async def publish(self, data):
+    async def publish(self, data: json):
 
         client = NatsWrapper.getInstance()
         await client.sc.publish(subject=self.subject.value, payload=bytes(data, 'UTF-8'))

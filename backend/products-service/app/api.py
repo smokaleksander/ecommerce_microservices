@@ -37,7 +37,7 @@ async def list_products(request: Request):
 
 
 @router.get("/{id}", response_description="Get a single product", status_code=200)
-async def show_product(id: str, request: Request):
+async def show_product(id: str):
     if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})) is not None:
         return ProductModelDB(**product)
 
@@ -45,7 +45,7 @@ async def show_product(id: str, request: Request):
 
 
 @router.put("/{id}", response_description="Update a product")
-async def update_product(id: str, request: Request, product: ProductModel,  current_user: TokenData = Depends(authenticate)):
+async def update_product(id: str, product: ProductModel,  current_user: TokenData = Depends(authenticate)):
 
     update_result = await Mongo.getInstance().db["products"].update_one(
         {"_id": ObjectId(id), "user_id": current_user.id},

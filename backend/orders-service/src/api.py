@@ -19,7 +19,7 @@ EXPIRATION_CART_TIME_MINUTES = 30
 router = APIRouter(prefix='/api/orders')
 
 
-@router.post("/", response_model=OrderModelDB, status_code=201)
+@router.post("/{product_id}", response_model=OrderModelDB, status_code=201)
 async def create_order(product_id: str,  current_user: TokenData = Depends(authenticate)):
     # look for product user is trying to add to cart
     if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(product_id)})) is None:
@@ -55,7 +55,7 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
 @ router.get("/", status_code=200)
 async def list_orders(request: Request, current_user: TokenData = Depends(authenticate)):
     orders = []
-    for doc in await Mongo.getInstance().db["orders"].find({}).to_list(length=100):
+    for doc in await Mongo.getInstance().db["orders"].find({"user_id": current_user.id}).to_list(length=100):
         orders.append(OrderModelDB(**doc))
     return orders
 
@@ -76,22 +76,18 @@ async def show_product(id: str, request: Request):
     raise HTTPException(status_code=404, detail=f"Product {id} not found")
 
 
-@ router.post('/product')
-async def up_prod(prod):
-    update_product(prod)
-
-
 @ router.get("/{id}", response_model=OrderModelDB, status_code=200)
 async def show_order(id: str, current_user: TokenData = Depends(authenticate)):
-    if (order := await Order.find(Order.user_id == current_user.id, _id=PydanticObjectId(id))) is not None:
-        return order
+    if (order := await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(id), "user_id": current_user.id})) is not None:
+        return OrderModelDB(**order)
     raise HTTPException(status_code=404, detail=f"Order {id} not found")
 
 
-@ router.delete("/{id}", response_description="Delete product", status_code=204)
+@ router.delete("/{id}", response_description="Order deleted", status_code=204)
 async def delete_order(id: str, current_user: TokenData = Depends(authenticate)):
-    if (order := await Order.find(Order.user_id == current_user.id, _id=PydanticObjectId(id))) is not None:
-        await order.delete()
-        Publisher(EventType.order_cancelled).publish(order.dict())
-        return
+    delete_result = await Mongo.getInstance().db["order"].delete_one({"id": ObjectId(id), "user_id": current_user.id})
+
+    if delete_result.deleted_count == 1:
+        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+
     raise HTTPException(status_code=404, detail=f"Order {id} not found")
