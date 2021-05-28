@@ -10,14 +10,13 @@ from .EventType import EventType
 
 class Publisher:
 
-    def __init__(self, EventType):
-        self.subject = EventType
+    def __init__(self, subject):
+        self.subject = subject
 
     async def publish(self, data):
 
         client = NatsWrapper.getInstance()
-        data = json.dumps(data)
-        await client.sc.publish(subject=self.subject, payload=bytes(data, 'utf-8'))
+        await client.sc.publish(subject=self.subject.value, payload=bytes(data, 'UTF-8'))
 
         # await sc.close()
         # await nc.close()

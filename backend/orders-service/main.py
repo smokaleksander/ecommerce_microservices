@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
-from beanie import init_beanie
 from events_module.Publisher import Publisher
 from events_module.NatsWrapper import NatsWrapper
 from events_module.Listener import Listener
@@ -17,7 +16,10 @@ from config import settings
 from src.api import router
 from src.product_utils import create_product, update_product
 from src.models.Product import ProductModel
+from src.models.Order import OrderModel
 from src.MongoDB import Mongo
+from bson import ObjectId
+
 app = FastAPI(docs_url=settings.DOCS_URL,
               openapi_url=settings.OPENAPI_URL, redoc_url=None, title=settings.APP_NAME)
 
@@ -33,6 +35,12 @@ async def startup_connections():
     # connecting to nats
     await NatsWrapper().connect()
     # start listen on events
+    # pr = ProductModel(id=ObjectId('60b02576b21129b450bf26a7'),
+    #                   model='model', price=40.0, version=1)
+    # ord = OrderModel(id=ObjectId('70b02576b21129b450bf26a7'),
+    #                  product=pr)
+    # print(ord.dict())
+    # await Mongo.getInstance().db["orders"].insert_one(ord.dict())
     await Listener(subject=EventType.product_created,
                    on_receive_func=create_product).listen()
     await Listener(EventType.product_updated, update_product).listen()

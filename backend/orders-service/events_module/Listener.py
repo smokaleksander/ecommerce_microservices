@@ -7,7 +7,7 @@ from fastapi import Request
 
 
 class Listener:
-    ack_wait_time = 30  # seconds
+    ack_wait_time = 3  # seconds
 
     def __init__(self, subject, on_receive_func):
         self.subject = subject
@@ -25,9 +25,10 @@ class Listener:
             await client.sc.ack(msg)
             obj = msg.data.decode('UTF-8')
             obj = json.loads(obj)
-            await self.on_receive_func(obj)
+            if (await self.on_receive_func(obj)):
+                await sc.ack(msg)
+            # Subscribe to get all messages since beginning.
 
-        # Subscribe to get all messages since beginning.
         sub = await client.sc.subscribe(
             subject=self.subject.value,
             deliver_all_available=True,

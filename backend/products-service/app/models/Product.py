@@ -25,6 +25,7 @@ class ProductModel(BaseModel):
     brand: str
     size: float
     price: float
+    order_id: str = None
 
     class Config:
         allow_population_by_field_name = True

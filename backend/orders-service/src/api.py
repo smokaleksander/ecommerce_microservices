@@ -20,29 +20,39 @@ router = APIRouter(prefix='/api/orders')
 
 
 @router.post("/", response_model=OrderModelDB, status_code=201)
-async def create_order(order: OrderModel,  current_user: TokenData = Depends(authenticate)):
+async def create_order(product_id: str,  current_user: TokenData = Depends(authenticate)):
     # look for product user is trying to add to cart
-    if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(order.id)})) is None:
+    if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(product_id)})) is None:
         raise HTTPException(
-            status_code=404, detail=f"Product {order.product_id} not found")
-
+            status_code=404, detail=f"Product {order.product.id} not found")
+    product = ProductModel(**product)
+    order_statuses = list(['one', 'two'])
     # check if product is not in someone elses cart already
-    if (exisiting_order := await Mongo.getInstance().db["orders"].find_one({Order.product == product, In(Order.status, [OrderStatus.created, OrderStatus.awaiting_status, OrderStatus.awaiting_payment, OrderStatus.complete])})) is not None:
+    if (exisiting_order := await Mongo.getInstance().db["orders"].find_one(
+        {"product": product.dict()},
+        {"status": {"$in": [["created", "awaiting_payment"],  # why two arrays - i have no idea pymongo throws error if not
+                            ["complete"]]}}
+    )
+    ) is not None:
         raise HTTPException(
-            status_code=404, detail=f"Product is reserved")
+            status_code=404, detail=f"Order this product is impossible right now")
 
     expiration = datetime.now() + timedelta(minutes=EXPIRATION_CART_TIME_MINUTES)
     expiration
 
-    new_order = Order(user_id=current_user.id, status=OrderStatus.created,
-                      expires_at=expiration, product=product)
-    await new_order.insert()
+    new_order = OrderModelDB(user_id=current_user.id, status=OrderStatus.created,
+                             expires_at=expiration, product=product, version=1)
+    inserted_order = await Mongo.getInstance().db["orders"].insert_one(new_order.dict())
+    # check if new order in db and return in
+    inserted_order = await Mongo.getInstance().db["orders"].find_one(
+        {"_id": inserted_order.inserted_id}
+    )
+    inserted_order = OrderModelDB(**inserted_order)
+    await Publisher(EventType.order_created).publish(inserted_order.json())
+    return inserted_order
 
-    Publisher(EventType.order_created).publish(new_order.dict())
-    return new_order
 
-
-@router.get("/", response_model=List[OrderModelDB], status_code=200)
+@ router.get("/", status_code=200)
 async def list_orders(request: Request, current_user: TokenData = Depends(authenticate)):
     orders = []
     for doc in await Mongo.getInstance().db["orders"].find({}).to_list(length=100):
@@ -50,7 +60,7 @@ async def list_orders(request: Request, current_user: TokenData = Depends(authen
     return orders
 
 
-@router.get("/products", response_description="List all products", status_code=200)
+@ router.get("/products", response_description="List all products", status_code=200)
 async def list_products(request: Request):
     products = []
     for doc in await Mongo.getInstance().db["products"].find({}).to_list(length=100):
@@ -58,7 +68,7 @@ async def list_products(request: Request):
     return products
 
 
-@router.get("/products/{id}", response_description="Get a single product", status_code=200)
+@ router.get("/products/{id}", response_description="Get a single product", status_code=200)
 async def show_product(id: str, request: Request):
     if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})) is not None:
         return str(product)
@@ -66,12 +76,12 @@ async def show_product(id: str, request: Request):
     raise HTTPException(status_code=404, detail=f"Product {id} not found")
 
 
-@router.post('/product')
+@ router.post('/product')
 async def up_prod(prod):
     update_product(prod)
 
 
-@router.get("/{id}", response_model=OrderModelDB, status_code=200)
+@ router.get("/{id}", response_model=OrderModelDB, status_code=200)
 async def show_order(id: str, current_user: TokenData = Depends(authenticate)):
     if (order := await Order.find(Order.user_id == current_user.id, _id=PydanticObjectId(id))) is not None:
         return order
