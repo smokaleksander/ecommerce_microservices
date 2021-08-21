@@ -18,7 +18,7 @@ async def lock_product(order):
         return True
 
 
-async def unlock_product(product):
+async def unlock_product(order):
     try:
         new_product = await Mongo.getInstance().db["products"].update_one(
             {"_id": ObjectId(order["product"]["id"])},

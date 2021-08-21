@@ -1,10 +1,9 @@
-FROM python:3.6-slim
+FROM python:3.8-slim
 
 WORKDIR /
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH  "${PYTHONPATH}:./common_modules/"
 COPY . .
 RUN apt-get update \
     #&& apt-get install -y --no-install-recommends apt-utils gcc python-dev  \

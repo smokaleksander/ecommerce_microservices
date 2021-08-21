@@ -56,33 +56,3 @@ class OrderModelDB(OrderModel):
                 "model": "jordan 4 blue navy",
             }
         }
-
-
-# class Order(Document):
-#     status: OrderStatus
-#     expires_at: datetime
-#     user_id: PydanticObjectId
-#     product: Product
-
-#     class DocumentMeta:
-#         collection_name = 'orders'
-
-#     class Config:
-#         json_encoders = {ObjectId: str}
-#         arbitrary_types_allowed = True
-#         allow_population_by_field_name = True
-#         schema_extra = {
-#             "example": {
-#                 "id": "00010203-0405-0607-0809-0a0b0c0d0e0f",
-#                 "status": "reserved",
-#                 "expires_at": 'date',
-#                 "product": {
-#                     'id': "00010203-0405-0607-0809-0a0b0c0d0e0f",
-#                     'model': 'model',
-#                     'brand': 'brand',
-#                     'price': 400
-#                 }
-#             }
-#         }
-
-# Order.update_forward_refs()
