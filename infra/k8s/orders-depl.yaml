@@ -16,6 +16,8 @@ spec:
         - name: orders
           image: smokaleksander/orders-service
           env:
+            - name: REDIS_HOST
+              value: "http://expiration-redis-srv:6379"
             - name: JWT_SECRET_KEY
               valueFrom:
                 secretKeyRef:

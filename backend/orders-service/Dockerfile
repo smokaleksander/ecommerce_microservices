@@ -1,4 +1,4 @@
-FROM python:3.8-slim
+FROM python:3.6-slim
 
 WORKDIR /
 
@@ -14,5 +14,5 @@ RUN apt-get update \
     && pipenv install --ignore-pipfile --system
 #&& apt-get purge -y --auto-remove gcc python-dev
 
-EXPOSE 8001
+EXPOSE 8003
 CMD python main.py

@@ -8,3 +8,5 @@ class EventType(str, enum.Enum):
 
     order_created = 'order:created'
     order_cancelled = 'order:cancelled'
+
+    expiration_complete = 'expiration:complete'

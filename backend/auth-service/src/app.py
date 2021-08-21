@@ -14,7 +14,7 @@ from auth_module.auth import authenticate
 
 api = APIRouter(prefix='/api/users')
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+ACCESS_TOKEN_EXPIRE_MINUTES = 180
 ALGORITHM = "HS256"
 
 

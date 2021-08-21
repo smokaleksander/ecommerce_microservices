@@ -25,6 +25,7 @@ async def create_product(request: Request, product: ProductModel,  current_user:
     # emit event
     await Publisher(EventType.product_created).publish(
         ProductModelDB(**created_product).json(exclude={'size', 'brand', 'user_id'}))
+
     return ProductModelDB(**created_product)
 
 

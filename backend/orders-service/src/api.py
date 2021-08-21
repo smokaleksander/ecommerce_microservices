@@ -12,9 +12,10 @@ from events_module.EventType import EventType
 from datetime import datetime, timedelta
 from typing import List
 from .MongoDB import Mongo
-from .product_utils import update_product
+from .listener_handlers import update_product
+import json
 
-EXPIRATION_CART_TIME_MINUTES = 30
+EXPIRATION_CART_TIME_MINUTES = 1
 
 router = APIRouter(prefix='/api/orders')
 
@@ -22,24 +23,23 @@ router = APIRouter(prefix='/api/orders')
 @router.post("/{product_id}", response_model=OrderModelDB, status_code=201)
 async def create_order(product_id: str,  current_user: TokenData = Depends(authenticate)):
     # look for product user is trying to add to cart
-    if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(product_id)})) is None:
+    product = await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(product_id)})
+    if product is None:
         raise HTTPException(
             status_code=404, detail=f"Product {order.product.id} not found")
     product = ProductModel(**product)
-    order_statuses = list(['one', 'two'])
     # check if product is not in someone elses cart already
-    if (exisiting_order := await Mongo.getInstance().db["orders"].find_one(
+    existing_order = await Mongo.getInstance().db["orders"].find_one(
         {"product": product.dict()},
         {"status": {"$in": [["created", "awaiting_payment"],  # why two arrays - i have no idea pymongo throws error if not
                             ["complete"]]}}
     )
-    ) is not None:
+
+    if existing_order is not None:
         raise HTTPException(
             status_code=404, detail=f"Order this product is impossible right now")
 
     expiration = datetime.now() + timedelta(minutes=EXPIRATION_CART_TIME_MINUTES)
-    expiration
-
     new_order = OrderModelDB(user_id=current_user.id, status=OrderStatus.created,
                              expires_at=expiration, product=product, version=1)
     inserted_order = await Mongo.getInstance().db["orders"].insert_one(new_order.dict())
@@ -48,7 +48,10 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
         {"_id": inserted_order.inserted_id}
     )
     inserted_order = OrderModelDB(**inserted_order)
-    await Publisher(EventType.order_created).publish(inserted_order.json())
+    try:
+        await Publisher(EventType.order_created).publish(inserted_order.json(exclude={'size', 'brand', 'user_id'}))
+    except Exception as e:
+        print(e)
     return inserted_order
 
 
@@ -70,7 +73,8 @@ async def list_products(request: Request):
 
 @ router.get("/products/{id}", response_description="Get a single product", status_code=200)
 async def show_product(id: str, request: Request):
-    if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})) is not None:
+    product = await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})
+    if product is not None:
         return str(product)
 
     raise HTTPException(status_code=404, detail=f"Product {id} not found")
@@ -78,7 +82,8 @@ async def show_product(id: str, request: Request):
 
 @ router.get("/{id}", response_model=OrderModelDB, status_code=200)
 async def show_order(id: str, current_user: TokenData = Depends(authenticate)):
-    if (order := await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(id), "user_id": current_user.id})) is not None:
+    order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(id), "user_id": current_user.id})
+    if order is not None:
         return OrderModelDB(**order)
     raise HTTPException(status_code=404, detail=f"Order {id} not found")
 

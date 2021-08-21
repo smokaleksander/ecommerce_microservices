@@ -10,9 +10,12 @@ async def lock_product(order):
             {"_id": ObjectId(order["product"]["id"])},
             {"$set": {"order_id": order["id"]}}
         )
-    except:
-        print('err')
-    return True
+    except Exception as e:
+        print('Locking product failed')
+        print(e)
+    else:
+        print("INFO:    Product with ID: "+order['product']['id']+" is locked")
+        return True
 
 
 async def unlock_product(product):
@@ -21,6 +24,10 @@ async def unlock_product(product):
             {"_id": ObjectId(order["product"]["id"])},
             {"$set": {"order_id": None}}
         )
-    except:
-        print('error')
-    return True
+    except Exception as e:
+        print('Unlocking product failed')
+        print(e)
+    else:
+        print("INFO:    Product with ID: " +
+              order['product']['id']+" is unlocked")
+        return True

@@ -1,4 +1,4 @@
-apiVersion: skaffold/v2alpha3
+apiVersion: skaffold/v2beta20
 kind: Config
 deploy:
   kubectl:
@@ -38,5 +38,21 @@ build:
         dockerfile: Dockerfile
       sync:
         manual:
-          - src: "**/*.py"
+          - src: "**/**/*.py"
             dest: .
+    - image: smokaleksander/expiration-service
+      context: backend/expiration-service
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+          - src: "src/**/*.ts"
+            dest: .
+    # - image: smokaleksander/expiration-worker-service
+    #   context: backend/expiration-worker-service
+    #   docker:
+    #     dockerfile: Dockerfile
+    #   sync:
+    #     manual:
+    #       - src: "**/**/*.py"
+    #         dest: .

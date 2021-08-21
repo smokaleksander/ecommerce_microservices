@@ -1,7 +1,6 @@
 from typing import Optional
 from bson import ObjectId
 from pydantic import BaseModel, Field
-from beanie import Document
 
 
 class PyObjectId(ObjectId):

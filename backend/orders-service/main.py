@@ -14,7 +14,7 @@ from events_module.Listener import Listener
 from events_module.EventType import EventType
 from config import settings
 from src.api import router
-from src.product_utils import create_product, update_product
+from src.listener_handlers import create_product, update_product
 from src.models.Product import ProductModel
 from src.models.Order import OrderModel
 from src.MongoDB import Mongo
@@ -30,20 +30,17 @@ app.include_router(router)
 async def startup_connections():
     if not settings.JWT_SECRET_KEY:
         raise ValueError('JWT_SECRET_KEY not defined')
+    if not settings.REDIS_HOST:
+        raise ValueError('REDIS HOST not defined')
     # connect to db
     await Mongo().connect(settings.DB_URL, settings.DB_NAME)
     # connecting to nats
     await NatsWrapper().connect()
-    # start listen on events
-    # pr = ProductModel(id=ObjectId('60b02576b21129b450bf26a7'),
-    #                   model='model', price=40.0, version=1)
-    # ord = OrderModel(id=ObjectId('70b02576b21129b450bf26a7'),
-    #                  product=pr)
-    # print(ord.dict())
-    # await Mongo.getInstance().db["orders"].insert_one(ord.dict())
     await Listener(subject=EventType.product_created,
                    on_receive_func=create_product).listen()
     await Listener(EventType.product_updated, update_product).listen()
+    await Listener(subject=EventType.expiration_complete,
+                   on_receive_func=create_product).listen()
 
 
 @app.on_event("shutdown")

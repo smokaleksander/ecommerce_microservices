@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     NATS_URL: str
     NATS_CLUSTER_ID: str
+    REDIS_HOST: str = None
 
     class Config:
         env_file = ".env"

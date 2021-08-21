@@ -12,9 +12,10 @@ python-jose = "*"
 asyncio-nats-streaming = "*"
 pydantic = "*"
 starlette = "*"
-beanie = "*"
+redis = "*"
+rq = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.8"
+python_version = "3.6"
