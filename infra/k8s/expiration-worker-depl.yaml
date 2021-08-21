@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expiration-worker-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: expiration-worker
+  template:
+    metadata:
+      labels:
+        app: expiration-worker
+    spec:
+      containers:
+        - name: expiration-worker
+          image: smokaleksander/expiration-worker-service
+          env:
+            - name: REDIS_HOST
+              value: "http://expiration-redis-srv:6379"
+            - name: NATS_URL
+              value: "http://nats-srv:4222"
+            - name: NATS_CLUSTER_ID
+              value: "ecom"

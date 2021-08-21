@@ -15,5 +15,5 @@ RUN apt-get update \
     && pipenv install --ignore-pipfile --system
 #&& apt-get purge -y --auto-remove gcc python-dev
 
-EXPOSE 8001
+EXPOSE 8002
 CMD python main.py

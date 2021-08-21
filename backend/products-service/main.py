@@ -1,33 +1,46 @@
-from config import settings
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi.exceptions import RequestValidationError
 import uvicorn
+import os
+import json
 from fastapi import FastAPI, status
+from config import settings
+from fastapi.exceptions import RequestValidationError
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-import os
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api import router
+from app.events_module.Publisher import Publisher
+from app.events_module.NatsWrapper import NatsWrapper
+from app.events_module.Listener import Listener
+from app.events_module.EventType import EventType
+from app.MongoDB import Mongo
+from app.event_handlers import lock_product, unlock_product
 
 app = FastAPI(docs_url=settings.DOCS_URL,
               openapi_url=settings.OPENAPI_URL, redoc_url=None, title=settings.APP_NAME)
+
 
 app.include_router(router)
 
 
 @app.on_event("startup")
-async def startup_db_client():
+async def startup_connections():
     if not settings.JWT_SECRET_KEY:
         raise ValueError('JWT_SECRET_KEY not defined')
-        # connect to db
-    app.mongodb_client = AsyncIOMotorClient(settings.DB_URL)
-    app.mongodb = app.mongodb_client[settings.DB_NAME]
+    # connect to db
+    await Mongo().connect(settings.DB_URL, settings.DB_NAME)
+    # connecting to nats
+    await NatsWrapper().connect()
+    # start listen on events
+    await Listener(EventType.order_created, lock_product).listen()
+    await Listener(EventType.order_cancelled, unlock_product).listen()
 
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
+@ app.on_event("shutdown")
+async def shutdown_connections():
     app.mongodb_client.close()
+    await NatsWrapper().getInstance().close()
 
 
 # allow for cors requests
@@ -45,18 +58,18 @@ app.add_middleware(
 )
 
 
-@app.exception_handler(StarletteHTTPException)
+@ app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
     print(exc.detail)
     return JSONResponse(status_code=exc.status_code, content=exc.detail)
 
 
-@app.exception_handler(RequestValidationError)
+@ app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     errors = []
     for err in exc.errors():
-        field = err['loc'][1]
-        msg = err['msg'].replace('this value', field)
+        field = err['loc'][0]
+        msg = err['msg'].replace('this value', str(field))
         errors.append(
             {'msg': msg, 'field': field})
     print(errors)

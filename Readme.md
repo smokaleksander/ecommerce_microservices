@@ -1,5 +1,3 @@
-test run:
-export PYTHONPATH="${PYTHONPATH}:$PWD"
 
 first run:
 install  ingress-nginx

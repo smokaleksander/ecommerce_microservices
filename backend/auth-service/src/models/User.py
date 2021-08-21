@@ -70,7 +70,9 @@ class UserDBOut(UserBase):
     password: str = Field(min_length=6)
 
     class Config:
-        #json_encoders = {ObjectId: str}
+        json_encoders = {ObjectId: str}
+        arbitrary_types_allowed = True
+        allow_population_by_field_name = True
         schema_extra = {
             "example": {
                 "username": "jdoe@example.com",

@@ -6,3 +6,4 @@ infra/k8s/jwt-secret-key.yaml
 client/node_modules
 client/.next
 .vscode/
+nats-test/

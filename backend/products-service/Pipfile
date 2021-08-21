@@ -9,6 +9,9 @@ uvicorn = "*"
 python-dotenv = "*"
 motor = "*"
 python-jose = "*"
+asyncio-nats-streaming = "*"
+pydantic = "*"
+starlette = "*"
 
 [dev-packages]
 
