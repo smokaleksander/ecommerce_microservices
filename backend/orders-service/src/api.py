@@ -15,7 +15,7 @@ from .MongoDB import Mongo
 from .listener_handlers import update_product
 import json
 
-EXPIRATION_CART_TIME_MINUTES = 15
+EXPIRATION_CART_TIME_MINUTES = 30
 
 router = APIRouter(prefix='/api/orders')
 
@@ -49,7 +49,7 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
     )
     inserted_order = OrderModelDB(**inserted_order)
     try:
-        await Publisher(EventType.order_created).publish(inserted_order.json(exclude={'size', 'brand', 'user_id'}))
+        await Publisher(EventType.order_created).publish(inserted_order.json(exclude={'size', 'brand'}))
     except Exception as e:
         print(e)
     return inserted_order

@@ -17,9 +17,12 @@ async def create_product(product):
                 "price": product["price"],
                 "version": product["version"]
             })
-    except err:
-        print(err)
-    return True
+    except Exception as e:
+        print('ERROR:    Saving product failed')
+        print(e)
+    else:
+        print("INFO:    Product ID: "+product['id']+" saved")
+        return True
 
 
 async def update_product(product):
@@ -30,9 +33,12 @@ async def update_product(product):
             {"$set": {"model": product["model"], "price": product["price"]}, "$inc": {
                 "version": 1}}
         )
-    except err:
-        print(err)
-    return True
+    except Exception as e:
+        print('ERROR:    Product updating failed')
+        print(e)
+    else:
+        print("INFO:    Product ID: "+product['id']+" updated")
+        return True
 
 
 async def cancel_order(order):
@@ -41,7 +47,7 @@ async def cancel_order(order):
         update_result = await Mongo.getInstance().db["orders"].update_one(
             # check for lover version to update
             {"_id": ObjectId(order["orderId"])},
-            {"$set": {"status": OrderStatus.cancelled.value}}
+            {"$set": {"status": OrderStatus.cancelled.value}, "$inc": {"version": 1}}
         )
     except err:
         print(err)

@@ -10,12 +10,12 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api import router
-from app.events_module.Publisher import Publisher
-from app.events_module.NatsWrapper import NatsWrapper
-from app.events_module.Listener import Listener
-from app.events_module.EventType import EventType
+from events_module.Publisher import Publisher
+from events_module.NatsWrapper import NatsWrapper
+from events_module.Listener import Listener
+from events_module.EventType import EventType
 from app.MongoDB import Mongo
-from app.event_handlers import lock_product, unlock_product
+from app.listeners_handlers import save_order, cancel_order
 
 app = FastAPI(docs_url=settings.DOCS_URL,
               openapi_url=settings.OPENAPI_URL, redoc_url=None, title=settings.APP_NAME)
@@ -33,8 +33,8 @@ async def startup_connections():
     # connecting to nats
     await NatsWrapper().connect()
     # start listen on events
-    await Listener(EventType.order_created, lock_product).listen()
-    await Listener(EventType.order_cancelled, unlock_product).listen()
+    await Listener(EventType.order_created, save_order).listen()
+    await Listener(EventType.order_cancelled, cancel_order).listen()
 
 
 @ app.on_event("shutdown")
@@ -68,7 +68,6 @@ async def http_exception_handler(request, exc):
 async def validation_exception_handler(request, exc):
     errors = []
     for err in exc.errors():
-        print(err)
         field = err['loc'][1]
         msg = err['msg'].replace('this value', str(field))
         errors.append(
