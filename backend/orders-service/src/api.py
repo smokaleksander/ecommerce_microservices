@@ -15,7 +15,7 @@ from .MongoDB import Mongo
 from .listener_handlers import update_product
 import json
 
-EXPIRATION_CART_TIME_MINUTES = 30
+EXPIRATION_CART_TIME_MINUTES = 2
 
 router = APIRouter(prefix='/api/orders')
 
@@ -39,7 +39,7 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
         raise HTTPException(
             status_code=404, detail=f"Order this product is impossible right now")
 
-    expiration = datetime.now() + timedelta(seconds=EXPIRATION_CART_TIME_MINUTES)
+    expiration = datetime.now() + timedelta(minutes=EXPIRATION_CART_TIME_MINUTES)
     new_order = OrderModelDB(user_id=current_user.id, status=OrderStatus.created,
                              expires_at=expiration, product=product, version=1)
     inserted_order = await Mongo.getInstance().db["orders"].insert_one(new_order.dict())

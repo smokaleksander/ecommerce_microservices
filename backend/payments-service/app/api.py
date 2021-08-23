@@ -6,17 +6,21 @@ from auth_module.Token import Token, TokenData
 from auth_module.auth import authenticate
 from .models.Charge import ChargeModel
 from .models.Order import OrderModel, OrderModelDB
+from .models.Payment import PaymentModel
 from events_module.Publisher import Publisher
 from events_module.EventType import EventType
 from events_module.OrderStatus import OrderStatus
 from .MongoDB import Mongo
-
+from config import settings
+import stripe
+import json
 router = APIRouter(prefix='/api/payments')
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 @router.post("/", status_code=201)
 async def create_charge(request: Request, charge: ChargeModel, current_user: TokenData = Depends(authenticate)):
-    print(charge)
     # check if order exists
     if (order := await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(charge.order_id)})) is None:
         raise HTTPException(status_code=404, detail=f"Order {id} not found")
@@ -25,68 +29,26 @@ async def create_charge(request: Request, charge: ChargeModel, current_user: Tok
     if order.user_id != current_user.id:
         raise HTTPException(status_code=401, detail=f"Not authorized")
     # check if order is not cancelled already
-    if order.status != OrderStatus.cancelled.value:
-        raise HTTPException(status_code=404, detail=f"Order cancelled")
-    # pr = ProductModelDB(**product.dict(), user_id=current_user.id, version=1)
-    # # save to DB
-    # new_product = await Mongo.getInstance().db["products"].insert_one(pr.dict())
+    if (order.status == OrderStatus.cancelled or order.status == OrderStatus.complete):
+        raise HTTPException(
+            status_code=404, detail=f"Order cancelled or completed")
+    # create charge
+    stripe_charge = stripe.Charge.create(
+        amount=int(order.price * 100),
+        currency="usd",
+        source=charge.stripe_token,
+        description="Ecom",
+    )
+    # create payment object
+    payment = PaymentModel(order_id=str(order.id), stripe_id=stripe_charge.id)
+    new_payment = await Mongo.getInstance().db["payments"].insert_one(payment.dict())
+    # check if payment is created successfully
+    new_payment = await Mongo.getInstance().db["payments"].find_one({"_id": ObjectId(new_payment.inserted_id)})
+    # emit event
+    await Publisher(EventType.payment_created).publish(PaymentModel(**new_payment).json())
 
-    # # check if item saved in DB and return it
-    # created_product = await Mongo.getInstance().db["products"].find_one(
-    #     {"_id": new_product.inserted_id}
-    # )
-    # # emit event
-    # await Publisher(EventType.product_created).publish(
-    #     ProductModelDB(**created_product).json(exclude={'size', 'brand', 'user_id'}))
+    return PaymentModel(**new_payment)
 
-    # return ProductModelDB(**created_product)
-
-
-# @router.get("/", response_description="List all products", status_code=200)
-# async def list_products(request: Request):
-#     products = []
-#     for doc in await Mongo.getInstance().db["products"].find({}).to_list(length=100):
-#         products.append(ProductModelDB(**doc))
-#     return products
-
-
-# @router.get("/{id}", response_description="Get a single product", status_code=200)
-# async def show_product(id: str):
-#     if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})) is not None:
-#         return ProductModelDB(**product)
-
-#     raise HTTPException(status_code=404, detail=f"Product {id} not found")
-
-
-# @router.put("/{id}", response_description="Update a product")
-# async def update_product(id: str, product: ProductModel,  current_user: TokenData = Depends(authenticate)):
-
-#     update_result = await Mongo.getInstance().db["products"].update_one(
-#         {"_id": ObjectId(id), "user_id": current_user.id},
-#         {"$set": product.dict(), "$inc": {"version": 1}}
-#     )
-
-#     if update_result.modified_count == 1:
-#         if (
-#             updated_product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id), "user_id": current_user.id})
-#         ) is not None:
-#             await Publisher(EventType.product_updated).publish(
-#                 ProductModelDB(**updated_product).json(exclude={'size', 'brand', 'user_id'}))
-#             return ProductModelDB(**updated_product)
-
-#     raise HTTPException(status_code=404, detail=f"Product {id} not found")
-
-
-# @ router.delete("/{id}", response_description="Delete product")
-# async def delete_product(id: str, request: Request,  current_user: TokenData = Depends(authenticate)):
-#     delete_result = await Mongo.getInstance().db["products"].delete_one({"id": ObjectId(id), "user_id": current_user.id})
-
-#     if delete_result.deleted_count == 1:
-#         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
-
-#     raise HTTPException(status_code=404, detail=f"Product {id} not found")
-
-# HELPER API CALLS
 
 @ router.get("/orders", status_code=200)
 async def list_orders():
@@ -95,3 +57,12 @@ async def list_orders():
         orders.append(OrderModelDB(**doc))
     # test
     return orders
+
+
+@ router.get("/", status_code=200)
+async def list_payments():
+    payments = []
+    for doc in await Mongo.getInstance().db["payments"].find({}).to_list(length=100):
+        payments.append(PaymentModel(**doc))
+    # test
+    return payments

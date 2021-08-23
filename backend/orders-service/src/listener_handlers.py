@@ -42,7 +42,9 @@ async def update_product(product):
 
 
 async def cancel_order(order):
-    print(order)
+    order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
+    if order.status == ORderStatus.complete:
+        return True
     try:
         update_result = await Mongo.getInstance().db["orders"].update_one(
             # check for lover version to update
@@ -62,4 +64,28 @@ async def cancel_order(order):
         else:
             print('INFO:    Order ID: ' +
                   order['orderId']+' canceled event emitted')
+    return True
+
+
+async def complete_order(payment):
+    print(payment)
+    try:
+        update_result = await Mongo.getInstance().db["orders"].update_one(
+            # check for lover version to update
+            {"_id": ObjectId(payment["order_id"])},
+            {"$set": {"status": OrderStatus.complete.value}, "$inc": {"version": 1}}
+        )
+    except err:
+        print(err)
+    else:
+        print('INFO:    Order ID: '+payment['order_id']+' is completed')
+        try:
+            order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(payment['order_id'])})
+            order = OrderModelDB(**order)
+            await Publisher(EventType.order_completed).publish(order.json())
+        except Exception as e:
+            print(e)
+        else:
+            print('INFO:    Order ID: ' +
+                  payment['order_id']+' complete event emitted')
     return True

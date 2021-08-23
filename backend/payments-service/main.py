@@ -15,7 +15,7 @@ from events_module.NatsWrapper import NatsWrapper
 from events_module.Listener import Listener
 from events_module.EventType import EventType
 from app.MongoDB import Mongo
-from app.listeners_handlers import save_order, cancel_order
+from app.listeners_handlers import save_order, cancel_order, complete_order
 
 app = FastAPI(docs_url=settings.DOCS_URL,
               openapi_url=settings.OPENAPI_URL, redoc_url=None, title=settings.APP_NAME)
@@ -35,6 +35,7 @@ async def startup_connections():
     # start listen on events
     await Listener(EventType.order_created, save_order).listen()
     await Listener(EventType.order_cancelled, cancel_order).listen()
+    await Listener(EventType.order_completed, complete_order).listen()
 
 
 @ app.on_event("shutdown")

@@ -38,3 +38,18 @@ async def cancel_order(order):
         print("INFO:    Order with ID: " +
               order['id']+" is cancelled")
         return True
+
+
+async def complete_order(order):
+    try:
+        new_product = await Mongo.getInstance().db["orders"].update_one(
+            {"_id": ObjectId(order["id"]), "version": order["version"] - 1},
+            {"$set": {"status": OrderStatus.complete.value}, "$inc": {"version": 1}}
+        )
+    except Exception as e:
+        print('ERROR:    Completing order failed')
+        print(e)
+    else:
+        print("INFO:    Order with ID: " +
+              order['id']+" is completed")
+        return True

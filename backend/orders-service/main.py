@@ -14,7 +14,7 @@ from events_module.Listener import Listener
 from events_module.EventType import EventType
 from config import settings
 from src.api import router
-from src.listener_handlers import create_product, update_product, cancel_order
+from src.listener_handlers import create_product, update_product, cancel_order, complete_order
 from src.models.Product import ProductModel
 from src.models.Order import OrderModel
 from src.MongoDB import Mongo
@@ -41,6 +41,8 @@ async def startup_connections():
     await Listener(EventType.product_updated, update_product).listen()
     await Listener(subject=EventType.expiration_complete,
                    on_receive_func=cancel_order).listen()
+    await Listener(subject=EventType.payment_created,
+                   on_receive_func=complete_order).listen()
 
 
 @app.on_event("shutdown")
