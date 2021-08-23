@@ -68,11 +68,11 @@ async def http_exception_handler(request, exc):
 async def validation_exception_handler(request, exc):
     errors = []
     for err in exc.errors():
-        field = err['loc'][0]
+        print(err)
+        field = err['loc'][1]
         msg = err['msg'].replace('this value', str(field))
         errors.append(
             {'msg': msg, 'field': field})
-    print(errors)
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=jsonable_encoder({"errors": errors}))
 
 # start the server

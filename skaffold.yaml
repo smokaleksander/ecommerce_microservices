@@ -38,7 +38,7 @@ build:
         dockerfile: Dockerfile
       sync:
         manual:
-          - src: "**/**/*.py"
+          - src: "src/**/*.py"
             dest: .
     - image: smokaleksander/expiration-service
       context: backend/expiration-service
@@ -48,11 +48,11 @@ build:
         manual:
           - src: "src/**/*.ts"
             dest: .
-    # - image: smokaleksander/expiration-worker-service
-    #   context: backend/expiration-worker-service
-    #   docker:
-    #     dockerfile: Dockerfile
-    #   sync:
-    #     manual:
-    #       - src: "**/**/*.py"
-    #         dest: .
+    - image: smokaleksander/payments-service
+      context: backend/payments-service
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+          - src: "app/**/*.py"
+            dest: .
