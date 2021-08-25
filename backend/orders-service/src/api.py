@@ -12,10 +12,10 @@ from events_module.EventType import EventType
 from datetime import datetime, timedelta
 from typing import List
 from .MongoDB import Mongo
-from .listener_handlers import update_product
+from .listener_handlers import update_product, cancel_order
 import json
 
-EXPIRATION_CART_TIME_MINUTES = 2
+EXPIRATION_CART_TIME_MINUTES = 1
 
 router = APIRouter(prefix='/api/orders')
 
@@ -26,33 +26,34 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
     product = await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(product_id)})
     if product is None:
         raise HTTPException(
-            status_code=404, detail=f"Product {order.product.id} not found")
+            status_code=404, detail=f"Product {product_id} not found")
     product = ProductModel(**product)
     # check if product is not in someone elses cart already
     existing_order = await Mongo.getInstance().db["orders"].find_one(
         {"product": product.dict()},
-        {"status": {"$in": [["created", "awaiting_payment"],  # why two arrays - i have no idea pymongo throws error if not
-                            ["complete"]]}}
-    )
+        {"status": {"$in": [["created",  "complete"], []], }}
+    )  # pymongo returns "status": False (so stupid!) when cant match any of $in tables
 
-    if existing_order is not None:
-        raise HTTPException(
-            status_code=404, detail=f"Order this product is impossible right now")
+    print(existing_order)
+    if existing_order is None or existing_order['status'] == False:
 
-    expiration = datetime.now() + timedelta(minutes=EXPIRATION_CART_TIME_MINUTES)
-    new_order = OrderModelDB(user_id=current_user.id, status=OrderStatus.created,
-                             expires_at=expiration, product=product, version=1)
-    inserted_order = await Mongo.getInstance().db["orders"].insert_one(new_order.dict())
-    # check if new order in db and return in
-    inserted_order = await Mongo.getInstance().db["orders"].find_one(
-        {"_id": inserted_order.inserted_id}
-    )
-    inserted_order = OrderModelDB(**inserted_order)
-    try:
-        await Publisher(EventType.order_created).publish(inserted_order.json(exclude={'size', 'brand'}))
-    except Exception as e:
-        print(e)
-    return inserted_order
+        expiration = datetime.now() + timedelta(minutes=EXPIRATION_CART_TIME_MINUTES)
+        new_order = OrderModelDB(user_id=current_user.id, status=OrderStatus.created.value,
+                                 expires_at=expiration, product=product, version=1)
+        inserted_order = await Mongo.getInstance().db["orders"].insert_one(new_order.dict())
+        # check if new order in db and return in
+        inserted_order = await Mongo.getInstance().db["orders"].find_one(
+            {"_id": inserted_order.inserted_id}
+        )
+        inserted_order = OrderModelDB(**inserted_order)
+        try:
+            await Publisher(EventType.order_created).publish(inserted_order.json(exclude={'size', 'brand'}))
+        except Exception as e:
+            print(e)
+        return inserted_order
+
+    raise HTTPException(
+        status_code=405, detail={'errors': [{'msg': 'Product alread in someone`s cart', 'field': 'product_id'}]})
 
 
 @ router.get("/", status_code=200)
@@ -96,3 +97,31 @@ async def delete_order(id: str, current_user: TokenData = Depends(authenticate))
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
     raise HTTPException(status_code=404, detail=f"Order {id} not found")
+
+
+@router.post("/cancel/{id}")
+async def man_cancel(id: str, request: Request):
+    print(id)
+    order = {"orderId": id}
+    order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
+    if order['status'] == OrderStatus.complete.value:
+        return True
+    try:
+        update_result = await Mongo.getInstance().db["orders"].update_one(
+            # check for lover version to update
+            {"_id": ObjectId(order["order_id"])},
+            {"$set": {"status": OrderStatus.cancelled.value}, "$inc": {"version": 1}}
+        )
+    except Exception as e:
+        print(e)
+    else:
+        print('INFO:    Order ID: '+order['orderId']+' is cancelled')
+        try:
+            order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
+            order = OrderModelDB(**order)
+            await Publisher(EventType.order_cancelled).publish(order.json())
+        except Exception as e:
+            print(e)
+        else:
+            print('INFO:    Order ID: ' +
+                  order['orderId']+' canceled event emitted')

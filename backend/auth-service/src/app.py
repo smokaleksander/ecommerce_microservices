@@ -66,6 +66,8 @@ async def list_users(request: Request):
 async def get_current_user(request: Request, current_user: TokenData = Depends(authenticate)):
     if current_user:
         user = await get_user(request, current_user.username)
+        if user is None:
+            return None
         return UserDBOut(**user.dict())
     return None
 

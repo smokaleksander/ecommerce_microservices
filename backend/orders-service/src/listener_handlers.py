@@ -42,9 +42,10 @@ async def update_product(product):
 
 
 async def cancel_order(order):
-    order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
-    if order.status == ORderStatus.complete:
-        return True
+    print("cancelling")
+    # order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
+    # if order.status == ORderStatus.complete.value:
+    #     return True
     try:
         update_result = await Mongo.getInstance().db["orders"].update_one(
             # check for lover version to update
@@ -69,23 +70,27 @@ async def cancel_order(order):
 
 async def complete_order(payment):
     print(payment)
+    order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
+    if order['status'] == OrderStatus.complete.value:
+        return True
     try:
         update_result = await Mongo.getInstance().db["orders"].update_one(
             # check for lover version to update
-            {"_id": ObjectId(payment["order_id"])},
-            {"$set": {"status": OrderStatus.complete.value}, "$inc": {"version": 1}}
+            {"_id": ObjectId(order["order_id"])},
+            {"$set": {"status": OrderStatus.cancelled.value}, "$inc": {"version": 1}}
         )
-    except err:
-        print(err)
+    except Exception as e:
+        print(e)
     else:
-        print('INFO:    Order ID: '+payment['order_id']+' is completed')
+        print('INFO:    Order ID: '+order['orderId']+' is cancelled')
         try:
-            order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(payment['order_id'])})
+            order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
             order = OrderModelDB(**order)
-            await Publisher(EventType.order_completed).publish(order.json())
+            await Publisher(EventType.order_cancelled).publish(order.json())
         except Exception as e:
             print(e)
         else:
             print('INFO:    Order ID: ' +
-                  payment['order_id']+' complete event emitted')
+                  order['orderId']+' canceled event emitted')
+
     return True

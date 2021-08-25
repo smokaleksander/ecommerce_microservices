@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export default ({ currentUser }) => {
+const header = ({ currentUser }) => {
     const links = [
         !currentUser && { label: 'Sign Up', href: '/signup'},
         !currentUser && { label: 'Sign In', href: '/signin'},
@@ -28,3 +28,5 @@ export default ({ currentUser }) => {
         </nav>
     );
 };
+
+export default header;
