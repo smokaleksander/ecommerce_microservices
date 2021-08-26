@@ -9,13 +9,14 @@ from .models.Product import ProductModel
 from events_module.Publisher import Publisher
 from events_module.OrderStatus import OrderStatus
 from events_module.EventType import EventType
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import time
 from typing import List
 from .MongoDB import Mongo
 from .listener_handlers import update_product, cancel_order
 import json
 
-EXPIRATION_CART_TIME_MINUTES = 1
+EXPIRATION_CART_TIME_MINUTES = 2
 
 router = APIRouter(prefix='/api/orders')
 
@@ -30,30 +31,39 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
     product = ProductModel(**product)
     # check if product is not in someone elses cart already
     existing_order = await Mongo.getInstance().db["orders"].find_one(
-        {"product": product.dict()},
-        {"status": {"$in": [["created",  "complete"], []], }}
-    )  # pymongo returns "status": False (so stupid!) when cant match any of $in tables
+        {"product": product.dict(),
+         "status": "created"}
+    )
 
-    print(existing_order)
-    if existing_order is None or existing_order['status'] == False:
+    print("exs orders is: " + str(existing_order))
+    # print(OrderModelDB(**existing_order))
+    if existing_order is not None:
+        raise HTTPException(
+            status_code=405, detail={'errors': [{'msg': 'Product alread in someone`s cart', 'field': 'product_id'}]})
 
-        expiration = datetime.now() + timedelta(minutes=EXPIRATION_CART_TIME_MINUTES)
-        new_order = OrderModelDB(user_id=current_user.id, status=OrderStatus.created.value,
-                                 expires_at=expiration, product=product, version=1)
-        inserted_order = await Mongo.getInstance().db["orders"].insert_one(new_order.dict())
-        # check if new order in db and return in
-        inserted_order = await Mongo.getInstance().db["orders"].find_one(
-            {"_id": inserted_order.inserted_id}
-        )
-        inserted_order = OrderModelDB(**inserted_order)
-        try:
-            await Publisher(EventType.order_created).publish(inserted_order.json(exclude={'size', 'brand'}))
-        except Exception as e:
-            print(e)
-        return inserted_order
+    existing_order = await Mongo.getInstance().db["orders"].find_one(
+        {"product": product.dict(),
+         "status": "complete"}
+    )
 
-    raise HTTPException(
-        status_code=405, detail={'errors': [{'msg': 'Product alread in someone`s cart', 'field': 'product_id'}]})
+    if existing_order is not None:
+        raise HTTPException(
+            status_code=405, detail={'errors': [{'msg': 'Product alread in someone`s cart', 'field': 'product_id'}]})
+
+    expiration = datetime.now() + timedelta(minutes=EXPIRATION_CART_TIME_MINUTES)
+    new_order = OrderModelDB(user_id=current_user.id, status=OrderStatus.created,
+                             expires_at=expiration, product=product, version=1)
+    inserted_order = await Mongo.getInstance().db["orders"].insert_one(new_order.dict())
+    # check if new order in db and return in
+    inserted_order = await Mongo.getInstance().db["orders"].find_one(
+        {"_id": inserted_order.inserted_id}
+    )
+    inserted_order = OrderModelDB(**inserted_order)
+    try:
+        await Publisher(EventType.order_created).publish(inserted_order.json(exclude={'size', 'brand'}))
+    except Exception as e:
+        print(e)
+    return inserted_order
 
 
 @ router.get("/", status_code=200)
@@ -85,7 +95,7 @@ async def show_product(id: str, request: Request):
 async def show_order(id: str, current_user: TokenData = Depends(authenticate)):
     order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(id), "user_id": current_user.id})
     if order is not None:
-        return OrderModelDB(**order)
+        return order
     raise HTTPException(status_code=404, detail=f"Order {id} not found")
 
 

@@ -15,7 +15,7 @@ const SneakerShow = ({ sneaker }) => {
         <h5>Size: { sneaker.size } EU</h5>
         <h3>Price:{ sneaker.price }</h3>
         {errors}
-        <button onClick={doRequest} className="btn btn-primary">Purchase</button>
+        <button onClick={() =>doRequest()} className="btn btn-primary">Purchase</button>
     </div>;
 };
 

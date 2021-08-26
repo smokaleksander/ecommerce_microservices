@@ -15,6 +15,7 @@ const AppComponent = ({ Component, pageProps, currentUser }) => {
 AppComponent.getInitialProps = async appContext => {
     const client = buildClient(appContext.ctx);
     let currentUser = null
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
     const response = await client.get('/api/users/currentuser').catch(function (error) {
         if (error.response) {
             currentUser = null;

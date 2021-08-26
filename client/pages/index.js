@@ -43,7 +43,7 @@ LandingPage.getInitialProps = async (context, client, currentUser) => {
     //flag to prevent self signed tls cert error
     //happens couse of faked https on dev environment
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
-    const { data } = await client.get('/api/products/');
+    const { data } = await client.get('/api/products/available');
 
     return { sneakers: data}
 };
