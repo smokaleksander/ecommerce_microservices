@@ -38,9 +38,12 @@ async def startup_connections():
     await NatsWrapper().connect()
     await Listener(subject=EventType.product_created,
                    on_receive_func=create_product).listen()
+
     await Listener(EventType.product_updated, update_product).listen()
+
     await Listener(subject=EventType.expiration_complete,
                    on_receive_func=cancel_order).listen()
+                   
     await Listener(subject=EventType.payment_created,
                    on_receive_func=complete_order).listen()
 

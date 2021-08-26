@@ -42,17 +42,17 @@ async def update_product(product):
 
 
 async def cancel_order(order):
-    order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
-    if order.status == ORderStatus.complete:
+    order_existing = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
+    if order_existing['status'] == OrderStatus.complete.value:
         return True
     try:
         update_result = await Mongo.getInstance().db["orders"].update_one(
             # check for lover version to update
-            {"_id": ObjectId(order["orderId"])},
+            {"_id": ObjectId(order['orderId'])},
             {"$set": {"status": OrderStatus.cancelled.value}, "$inc": {"version": 1}}
         )
-    except err:
-        print(err)
+    except Exception as e:
+        print(e)
     else:
         print('INFO:    Order ID: '+order['orderId']+' is cancelled')
         try:
@@ -64,7 +64,6 @@ async def cancel_order(order):
         else:
             print('INFO:    Order ID: ' +
                   order['orderId']+' canceled event emitted')
-    return True
 
 
 async def complete_order(payment):

@@ -69,7 +69,8 @@ async def http_exception_handler(request, exc):
 async def validation_exception_handler(request, exc):
     errors = []
     for err in exc.errors():
-        field = err['loc'][1]
+        print(err)
+        field = err['loc'][0]
         msg = err['msg'].replace('this value', str(field))
         errors.append(
             {'msg': msg, 'field': field})

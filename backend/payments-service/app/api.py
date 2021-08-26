@@ -55,7 +55,6 @@ async def list_orders():
     orders = []
     for doc in await Mongo.getInstance().db["orders"].find({}).to_list(length=100):
         orders.append(OrderModelDB(**doc))
-    # test
     return orders
 
 
@@ -64,5 +63,4 @@ async def list_payments():
     payments = []
     for doc in await Mongo.getInstance().db["payments"].find({}).to_list(length=100):
         payments.append(PaymentModel(**doc))
-    # test
     return payments

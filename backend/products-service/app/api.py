@@ -37,6 +37,14 @@ async def list_products(request: Request):
     return products
 
 
+@router.get("/available", response_description="List all products", status_code=200)
+async def list_products_available(request: Request):
+    products = []
+    for doc in await Mongo.getInstance().db["products"].find({"order_id": None}).to_list(length=100):
+        products.append(ProductModelDB(**doc))
+    return products
+
+
 @router.get("/{id}", response_description="Get a single product", status_code=200)
 async def show_product(id: str):
     if (product := await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})) is not None:
