@@ -27,7 +27,7 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
     product = await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(product_id)})
     if product is None:
         raise HTTPException(
-            status_code=404, detail=f"Product {product_id} not found")
+            status_code=404, detail={'errors': [{'msg': 'Product not found'}]})
     product = ProductModel(**product)
     # check if product is not in someone elses cart already
     existing_order = await Mongo.getInstance().db["orders"].find_one(
@@ -109,7 +109,7 @@ async def delete_order(id: str, current_user: TokenData = Depends(authenticate))
     raise HTTPException(status_code=404, detail=f"Order {id} not found")
 
 
-@router.post("/cancel/{id}")
+@ router.post("/cancel/{id}")
 async def man_cancel(id: str, request: Request):
     print(id)
     order = {"orderId": id}
