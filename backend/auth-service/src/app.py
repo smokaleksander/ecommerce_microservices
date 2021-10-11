@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from models.User import UserSignUp, UserBase, UserDB, UserDBOut
+from models.User import UserSignUp, UserBase, UserDB, UserDBOut, UserSignIn
 from auth_module.Token import Token, TokenData
 from auth_module.auth import authenticate
 
@@ -53,13 +53,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         'JWT_SECRET_KEY'), algorithm=ALGORITHM)
     return encoded_jwt
 
-
-@api.get("/users", response_description="List all users")
-async def list_users(request: Request):
-    users = []
-    for doc in await request.app.mongodb["users"].find({}).to_list(length=100):
-        users.append(User(**doc))
-    return users
+# testing purposes
+# @api.get("/users", response_description="List all users")
+# async def list_users(request: Request):
+#     users = []
+#     for doc in await request.app.mongodb["users"].find({}).to_list(length=100):
+#         users.append(User(**doc))
+#     return users
 
 
 @api.get("/currentuser", response_description='get details about current logged user')
@@ -94,14 +94,11 @@ async def create_user(response: Response, request: Request, user: UserSignUp):
 
 
 @ api.post('/signin', response_description='login to get jwt token in cookie')
-async def login(response: Response, request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(response: Response, request: Request, form_data: UserSignIn):
     user = await varify_user_credentials(request, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+            status_code=400, detail={'errors': [{'msg': 'Incorrect username or password', 'field': 'username, password'}]})
     # generate new token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(

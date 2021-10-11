@@ -103,3 +103,18 @@ class UserSignUp(UserBase):
                 "password_repeat": "123456",
             }
         }
+
+
+class UserSignIn(BaseModel):
+    username: str
+    password: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "fullname": "John Doe",
+                "username": "jdoe@example.com",
+                "password": "123456",
+                "password_repeat": "123456",
+            }
+        }

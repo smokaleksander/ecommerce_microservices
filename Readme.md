@@ -1,17 +1,51 @@
 
-first run:
-install  ingress-nginx
-    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.44.0/deploy/static/provider/cloud/deploy.yaml
-edit /etc/hosts 
-    add 127.0.0.1 'domain_name'
+# Microservices sneakers e-commerce app
 
-Create k8s secret with srtipe key
-kubectl create secret generic stripe-secret --from-literal STRIPE_SECRET_KEY=your_key_here
+A brief description of what this project does and who it's for
 
-skaffold dev
-ecom.dev
-if privacy error -> type 'thisisunsafe'
 
-sec run:
-run in docker-desktop k8s ns 'ecom'
-skaffold dev
+## Tech Stack
+
+**Client:** NextJS, Bootstrap
+
+**Server:** Python, FastApi, MongoDB
+
+**Infrastructure:** kubernetes
+
+  
+## Run Locally
+
+Before run [Docker for desktop](https://www.docker.com/products/docker-desktop) and [Skaffold](https://skaffold.dev/) are required.
+
+1. Clone the project
+
+```bash
+  git clone https://github.com/smokaleksander/ecommerce_microservices.git
+```
+
+2. Go to the project directory
+
+```bash
+  cd ecommerce_microservices
+```
+
+3. create [Nginx Ingress Controller](https://kubernetes.github.io/ingress-nginx/deploy/#docker-desktop )
+
+```bash
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.44.0/deploy/static/provider/cloud/deploy.yaml
+```
+
+4. create kubernetes secret with srtipe token 
+```bash
+  kubectl create secret generic stripe-secret --from-literal STRIPE_SECRET_KEY=your_key_here
+```
+
+5. Start the app
+
+```bash
+  skaffold dev
+```
+
+6. Go to [http://127.0.0.1](http://127.0.0.1)  
+
+7. On "Privacy Error" screen type "thisisunsafe" and hit Enter

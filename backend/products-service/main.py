@@ -25,7 +25,7 @@ app.include_router(router)
 
 
 @app.on_event("startup")
-async def startup_connections():
+async def on_startup():
     if not settings.JWT_SECRET_KEY:
         raise ValueError('JWT_SECRET_KEY not defined')
     # connect to db

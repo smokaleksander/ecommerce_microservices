@@ -16,7 +16,7 @@ from .MongoDB import Mongo
 from .listener_handlers import update_product, cancel_order
 import json
 
-EXPIRATION_CART_TIME_MINUTES = 2
+EXPIRATION_CART_TIME_MINUTES = 15
 
 router = APIRouter(prefix='/api/orders')
 
@@ -27,7 +27,7 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
     product = await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(product_id)})
     if product is None:
         raise HTTPException(
-            status_code=404, detail=f"Product {product_id} not found")
+            status_code=404, detail={'errors': [{'msg': 'Product not found'}]})
     product = ProductModel(**product)
     # check if product is not in someone elses cart already
     existing_order = await Mongo.getInstance().db["orders"].find_one(
@@ -35,7 +35,7 @@ async def create_order(product_id: str,  current_user: TokenData = Depends(authe
          "status": "created"}
     )
 
-    print("exs orders is: " + str(existing_order))
+    # print("exs orders is: " + str(existing_order))
     # print(OrderModelDB(**existing_order))
     if existing_order is not None:
         raise HTTPException(
@@ -74,23 +74,6 @@ async def list_orders(request: Request, current_user: TokenData = Depends(authen
     return orders
 
 
-@ router.get("/products", response_description="List all products", status_code=200)
-async def list_products(request: Request):
-    products = []
-    for doc in await Mongo.getInstance().db["products"].find({}).to_list(length=100):
-        products.append(str(doc))
-    return products
-
-
-@ router.get("/products/{id}", response_description="Get a single product", status_code=200)
-async def show_product(id: str, request: Request):
-    product = await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})
-    if product is not None:
-        return str(product)
-
-    raise HTTPException(status_code=404, detail=f"Product {id} not found")
-
-
 @ router.get("/{id}", response_model=OrderModelDB, status_code=200)
 async def show_order(id: str, current_user: TokenData = Depends(authenticate)):
     order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(id), "user_id": current_user.id})
@@ -99,39 +82,28 @@ async def show_order(id: str, current_user: TokenData = Depends(authenticate)):
     raise HTTPException(status_code=404, detail=f"Order {id} not found")
 
 
-@ router.delete("/{id}", response_description="Order deleted", status_code=204)
-async def delete_order(id: str, current_user: TokenData = Depends(authenticate)):
-    delete_result = await Mongo.getInstance().db["order"].delete_one({"id": ObjectId(id), "user_id": current_user.id})
+# @ router.delete("/{id}", response_description="Order deleted", status_code=204)
+# async def delete_order(id: str, current_user: TokenData = Depends(authenticate)):
+#     delete_result = await Mongo.getInstance().db["order"].delete_one({"id": ObjectId(id), "user_id": current_user.id})
 
-    if delete_result.deleted_count == 1:
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+#     if delete_result.deleted_count == 1:
+#         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
-    raise HTTPException(status_code=404, detail=f"Order {id} not found")
+#     raise HTTPException(status_code=404, detail=f"Order {id} not found")
+
+# TESTING PURPOSES
+# @ router.get("/products", response_description="List all products", status_code=200)
+# async def list_products(request: Request):
+#     products = []
+#     for doc in await Mongo.getInstance().db["products"].find({}).to_list(length=100):
+#         products.append(str(doc))
+#     return products
 
 
-@router.post("/cancel/{id}")
-async def man_cancel(id: str, request: Request):
-    print(id)
-    order = {"orderId": id}
-    order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
-    if order['status'] == OrderStatus.complete.value:
-        return True
-    try:
-        update_result = await Mongo.getInstance().db["orders"].update_one(
-            # check for lover version to update
-            {"_id": ObjectId(order["order_id"])},
-            {"$set": {"status": OrderStatus.cancelled.value}, "$inc": {"version": 1}}
-        )
-    except Exception as e:
-        print(e)
-    else:
-        print('INFO:    Order ID: '+order['orderId']+' is cancelled')
-        try:
-            order = await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(order['orderId'])})
-            order = OrderModelDB(**order)
-            await Publisher(EventType.order_cancelled).publish(order.json())
-        except Exception as e:
-            print(e)
-        else:
-            print('INFO:    Order ID: ' +
-                  order['orderId']+' canceled event emitted')
+# @ router.get("/products/{id}", response_description="Get a single product", status_code=200)
+# async def show_product(id: str, request: Request):
+#     product = await Mongo.getInstance().db["products"].find_one({"_id": ObjectId(id)})
+#     if product is not None:
+#         return str(product)
+
+#     raise HTTPException(status_code=404, detail=f"Product {id} not found")

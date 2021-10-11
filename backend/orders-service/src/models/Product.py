@@ -21,7 +21,6 @@ class PyObjectId(ObjectId):
 
 class ProductModel(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    # product_id: str
     model: str
     price: float
     version: int

@@ -4,8 +4,8 @@ backend/auth-service/app/.env
 backend/products-service/.env
 backend/payments-service/.env
 */*/.env
-infra/k8s/jwt-secret-key.yaml
-infra/k8s/stripe-secret-key.yaml
+# infra/k8s/jwt-secret-key.yaml
+# infra/k8s/stripe-secret-key.yaml
 client/node_modules
 client/.next
 .vscode/

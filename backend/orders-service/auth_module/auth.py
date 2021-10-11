@@ -14,7 +14,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 async def authenticate(request: Request, token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail={'errors': [{'msg': 'You are not logged'}]},
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
