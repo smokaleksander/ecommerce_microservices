@@ -1,7 +1,8 @@
 
 # Microservices sneakers e-commerce app
 
-A brief description of what this project does and who it's for
+Sneakers e-commerce platform for selling and buying limited shoes build as example of microservices arhcitecture in Python and NestJS.
+Running on Kubernetes.
 
 
 ## Tech Stack
