@@ -20,7 +20,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 @router.post("/", status_code=201)
-async def create_charge(request: Request, charge: ChargeModel, current_user: TokenData = Depends(authenticate)):
+async def proceed_payment(request: Request, charge: ChargeModel, current_user: TokenData = Depends(authenticate)):
     # check if order exists
     if (order := await Mongo.getInstance().db["orders"].find_one({"_id": ObjectId(charge.order_id)})) is None:
         raise HTTPException(status_code=404, detail=f"Order {id} not found")
@@ -50,17 +50,17 @@ async def create_charge(request: Request, charge: ChargeModel, current_user: Tok
     return PaymentModel(**new_payment)
 
 
-@ router.get("/orders", status_code=200)
-async def list_orders():
-    orders = []
-    for doc in await Mongo.getInstance().db["orders"].find({}).to_list(length=100):
-        orders.append(OrderModelDB(**doc))
-    return orders
+# @ router.get("/orders", status_code=200)
+# async def list_orders():
+#     orders = []
+#     for doc in await Mongo.getInstance().db["orders"].find({}).to_list(length=100):
+#         orders.append(OrderModelDB(**doc))
+#     return orders
 
 
-@ router.get("/", status_code=200)
-async def list_payments():
-    payments = []
-    for doc in await Mongo.getInstance().db["payments"].find({}).to_list(length=100):
-        payments.append(PaymentModel(**doc))
-    return payments
+# @ router.get("/", status_code=200)
+# async def list_payments():
+#     payments = []
+#     for doc in await Mongo.getInstance().db["payments"].find({}).to_list(length=100):
+#         payments.append(PaymentModel(**doc))
+#     return payments

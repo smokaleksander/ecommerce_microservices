@@ -5,10 +5,10 @@ const req =  ({ url, method, body,config, onSuccess }) => {
     const [errors, setErrors] =  useState(null);
     console.log({body})
     const doRequest = async (props = {}) => {
-        console.log({...body, ...props})
+        
         try {
             setErrors(null);
-            const response = await axios[method](url,{
+            const response = await axios[method](url, config,{
                 ...body, ...props
             });
 
